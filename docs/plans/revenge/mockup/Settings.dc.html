@@ -42,7 +42,7 @@ a{color:#8fb8ff}a:hover{color:#b8d2ff}
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{plates}}" onChange="{{ togglePlates }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Skull beside recent killers&#39; nameplates</label>
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{pins}}" onChange="{{ togglePins }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Show kills on the world map</label>
         <h3 style="margin: 8px 0 0; font-size: 17px; font-weight: 700; color: #e8c25a">Sharing</h3>
-        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{shareGuild}}" onChange="{{ toggleGuild }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Share my deaths with my guild</label>
+        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{shareGuild}}" onChange="{{ toggleGuild }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Share my deaths and wanted players with my guild</label>
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{shareFriends}}" onChange="{{ toggleFriends }}" style="width: 18px; height: 18px; accent-color: #e8c25a">…with in-game friends</label>
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{shareBnet}}" onChange="{{ toggleBnet }}" style="width: 18px; height: 18px; accent-color: #e8c25a">…with Battle.net friends</label>
       </div>
@@ -78,7 +78,7 @@ a{color:#8fb8ff}a:hover{color:#b8d2ff}
       </div>
     </div>
   </div>
-  <div style="font-size: 13px; line-height: 1.45; color: #a3acb6">Defaults shown: 7 days; details on Shift; everything else on. A player added by name gets the skull and alerts without any kills yet.</div>
+  <div style="font-size: 13px; line-height: 1.45; color: #a3acb6">Defaults shown: 7 days; details on Shift; everything else on. A player you add by name shows &#8220;Wanted by you&#8221;, gets the skull and alerts, and is shared like your deaths; a friend&#39;s shows their name.</div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":940}}'>
@@ -96,7 +96,8 @@ class Component extends DCLogic {
         { id: 1, name: 'Gorvak Ashmane', who: 'Level 41 Orc Rogue', what: '(5) You, Mira, Tavish, +1 more', when: '2h ago' },
         { id: 2, name: 'Shazra Vex', who: 'Level 39 Troll Hunter', what: '(1) You', when: '2h ago' },
         { id: 3, name: 'Ruskar Redtusk', who: 'Level 44 Orc Warrior', what: '(1) Tavish', when: '3d ago' },
-        { id: 4, name: 'Velka Duskmantle', who: 'Level 40 Undead Mage', what: '(2) Mira', when: '6d ago' }
+        { id: 4, name: 'Velka Duskmantle', who: 'Level 40 Undead Mage', what: '(2) Mira', when: '6d ago' },
+        { id: 5, name: 'Darrok Vane', who: 'Level 43 Undead Rogue', what: 'Wanted by Mira', when: '1d ago' }
       ]
     };
   }
@@ -121,7 +122,7 @@ class Component extends DCLogic {
         const name = (this.state.draft || '').trim();
         if (!name) return;
         const id = Date.now();
-        this.setState({ draft: '', rows: [{ id, name, who: 'Added by hand', what: 'No kills yet', when: 'now' }].concat(this.state.rows) });
+        this.setState({ draft: '', rows: [{ id, name, who: 'Not seen yet', what: 'Wanted by you', when: 'now' }].concat(this.state.rows) });
       },
       resetAll: () => this.setState(this.defaults()),
       count: s.rows.length,
