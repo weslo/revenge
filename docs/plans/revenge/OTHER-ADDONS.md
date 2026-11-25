@@ -2,7 +2,8 @@
 
 - Updated: 2026-11-25, Claude (planning)
 - Decision: DEC-019 (user, in chat): "add an abstraction to the addon that supports messages from other popular addons (like RevengeBook) and deduplicates as best as possible. Let's plan the other-addon support first."
-- Requirements: REQ-024 to REQ-031 in [REQUIREMENTS.md](REQUIREMENTS.md); build rows IMP-013 to IMP-017 in [IMPLEMENTATION-MATRIX.md](IMPLEMENTATION-MATRIX.md)
+- Isolation: DEC-020 (user, in chat): other addons are "low priority when it comes to performance and maintenance… if they error, can't be parsed, or cause problems, they should be silently disregarded and prevented from impacting performance or functionality. Users should be able to easily switch off other addon compatibility."
+- Requirements: REQ-024 to REQ-032 in [REQUIREMENTS.md](REQUIREMENTS.md); build rows IMP-013 to IMP-018 in [IMPLEMENTATION-MATRIX.md](IMPLEMENTATION-MATRIX.md)
 - Evidence: read-only source reviews of each addon, 2026-11-25, at the versions named below. Line references are to those clones and will drift as the addons update.
 
 ## Goal
@@ -13,30 +14,84 @@ Deaths and Wanted marks that guildmates and friends share through **other** PvP 
 
 1. **Listen only.** Revenge reads other addons' messages, and their saved data when they're loaded. It never sends in another addon's format, never answers another addon's hello, and never joins another addon's chat channel. Joining one shows in your channel list, and some addons count every member as one of their users.
 2. **Same trust as Revenge's own sharing** (DEC-008). Accept reports only from current guildmates and friends (Q-012). A death report counts only when its sender is the victim; all three addons that send deaths enforce this themselves. A Wanted mark counts only when its sender is the one who added it.
-3. **Fail closed, per source.** Each adapter runs in `pcall` and drops anything it doesn't fully understand: an unknown message type, a wrong field count, an unknown protocol digit. An adapter that keeps failing turns itself off for the session and says so on the settings page.
+3. **Low priority, isolated, silent.** Other addons change and break in ways Revenge can't control (DEC-020). See [Isolation and priority](#isolation-and-priority). In short:
+   - Their support is an optional module the core never depends on.
+   - It runs on a strict time budget, behind Revenge's own work.
+   - Anything that errors or won't parse is dropped silently.
+   - One switch turns it all off.
 4. **Nothing secret.** Other addons' fields are plain strings, and never reach APIs that take secret values.
 5. **Light.** No bundled libraries. Every adapter below uses plain text that Lua can split, except Wanted: Dead or... Dead, which is deferred for that reason.
 6. **No copied code.** Revenge Book and HeadHunter have no license. Revenge reads their data formats, which is interoperability, and none of their code is copied.
 
+## Isolation and priority
+
+The user's rule (DEC-020): other addons are low priority for performance and maintenance. If they error, can't be parsed or cause problems, they're silently disregarded and must not affect performance or functionality. Users can easily switch other-addon support off.
+
+### A separate, optional module
+
+- **Its own folder.** All adapters live in a load-on-demand folder, `RevengeTracker_OtherAddons`, shipped in the same release zip as Revenge.
+- **Loaded only when wanted.** Revenge loads it only when **Use data from other addons** is on.
+  - Switched off, or disabled in the game's AddOns list, none of its code loads after the next `/reload`, and none of the other addons' prefixes are registered. It costs nothing.
+  - Switching it off also hides, at once, every kill and Wanted mark known *only* from other addons. Data that Revenge users also reported stays.
+- **The core never depends on it.** Revenge's recording, sharing, catch-up, tooltip, skull, alerts, pins and list work identically without the module.
+- **One narrow door.** The module reaches the core through a single call, `SubmitForeign(records)`.
+  - That call checks every record: known type, field types, string lengths, number ranges, sane times.
+  - Only then does a record enter the trust filter and merge.
+  - Adapters never touch the store, the UI or the settings directly.
+
+### Silent failure
+
+- **No messages, ever.**
+  - Every adapter call runs inside `pcall`.
+  - Errors are swallowed, never passed to the game's error handler, so Bugsy shows nothing.
+  - Input that can't be parsed is dropped without a message.
+  - Nothing about other addons ever appears in chat, a popup or an error frame. Their status shows only on the settings page, and in an optional `/revenge debug` log.
+- **A circuit breaker per adapter.** An adapter switches itself off for the rest of the session after any of:
+  - 5 errors;
+  - more than half of its last 50 messages failing to parse;
+  - 3 overruns of its time budget.
+
+  Its status line reads "paused: the other addon may have changed". It tries again next session.
+
+### Performance budget
+
+- **A queue, not the event handler.** Other addons' messages go into a small bounded queue, 200 entries, dropping the oldest when full. They're processed later in slices of at most **0.5 ms per frame**.
+- **In a busy moment, other addons' data waits.** Processing pauses in combat. Revenge's own messages are handled first and never wait behind them.
+- **Cheap rejection first.** Oversized messages and senders over a per-sender rate cap are dropped before any parsing. Trust checks (guildmate or friend) come before decoding wherever the sender is known.
+- **Saved-data importers are time-sliced** (a few entries per frame):
+  - they run once after login, then at most every 10 minutes, never in combat;
+  - each run has a total entry cap;
+  - each importer stops at the first structure it doesn't recognise.
+- **Bounded merge cost.** Foreign records merged per second are capped. Foreign-only data has its own storage cap, with the oldest dropped first.
+
+### Revenge's own data wins
+
+When a foreign record and Revenge's own disagree about a kill (killers, place, time), Revenge's own fields win. Foreign data only fills gaps, and adds kills Revenge doesn't otherwise know.
+
+### Low maintenance
+
+- **One file per adapter**, each with its own sample-message fixtures.
+- **A format change disables, not breaks.** When another addon changes its format, its adapter fails closed (the circuit breaker) until someone updates it.
+- **Adapters never hold up Revenge.** An adapter problem never blocks a Revenge release: it can ship switched off by default, or be left out of the module.
+- **Built last.** Adapters come after the core features and Revenge's first release (see [Order and effort](#order-and-effort)).
+
 ## Architecture
 
 ```
- CHAT_MSG_ADDON / BN_CHAT_MSG_ADDON                  other addons' saved data (read-only, while loaded)
-            │                                                       │
-            ▼                                                       ▼
-  Source registry: routes each prefix to its adapter       adapter.importLocal() at login, then every 2 min
-            │                                                       │
-            ▼                                                       ▼
-  adapter.decode(...) → normalized records: KillReport / WantedMark / Withdrawal
-            │
-            ▼
-  Trust filter: sender is a guildmate or friend; sender is the victim or adder; hostile killers only; size and rate caps
-            │
-            ▼
-  Identity resolution (name cache) → Merge (deduplicate, combine killers and sources) → Store → tooltip, skull, alerts, pins, list
+ ┌─ Revenge core (always loaded) ──────────────────────────────────────────────────────────────┐
+ │  own prefix RVNG1 ─► Sources/Revenge.lua ─┐                                                 │
+ │                                           ├─► trust filter ─► name cache ─► merge ─► store ─► tooltip, skull, alerts, pins, list
+ │  SubmitForeign(records) ─► validate ──────┘        (own data handled first; foreign capped) │
+ └──────────────▲──────────────────────────────────────────────────────────────────────────────┘
+                │ the only way in
+ ┌─ RevengeTracker_OtherAddons (load on demand, optional) ─────────────────────────────────────┐
+ │  other prefixes ─► size/rate/trust pre-checks ─► bounded queue ─► 0.5 ms/frame slices       │
+ │        ─► adapter.decode() in pcall ─► records          saved data ─► time-sliced importers │
+ │  circuit breaker per adapter · master switch · status lines for the settings page           │
+ └──────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Revenge's own protocol is one more source (`Sources/Revenge.lua`) on the same path, so every message exercises the merge and trust code.
+Revenge's own protocol is one more source (`Sources/Revenge.lua`) on the core's path, so the merge and trust code are exercised by every message, whether or not the module is loaded.
 
 ### Adapter interface
 
@@ -46,7 +101,7 @@ Revenge's own protocol is one more source (`Sources/Revenge.lua`) on the same pa
 | `prefixes` | Addon-message prefixes to register and route here |
 | `detect()` | Whether the other addon is loaded here, for the settings page. Listening works without it |
 | `decodeMessage(prefix, text, channel, sender)` | Returns normalized records, or nothing |
-| `importLocal()` | Optional. Reads the other addon's saved data read-only, returns records |
+| `importLocal()` | Optional. Reads the other addon's saved data read-only, a slice at a time, returns records |
 | `understands` | The protocol versions and message types this adapter knows; anything else is dropped and counted |
 
 ### Normalized records
@@ -94,8 +149,9 @@ Revenge's own protocol is one more source (`Sources/Revenge.lua`) on the same pa
 ### Settings and display
 
 - An **Other addons** group on the settings page:
-  - one switch per adapter, on by default;
-  - each switch's status: "listening", "reading saved data", "turned off after errors", and reports this session.
+  - At the top, one master switch, **Use data from other addons** (also `/revenge others off`). Off means the module isn't loaded after `/reload`, and foreign-only data is hidden at once.
+  - Below it, one switch per adapter, each on by default.
+  - Each switch's status: "listening", "reading saved data", "paused: the other addon may have changed", and reports this session.
 - **Provenance:** Shift details add a grey "via Revenge Book" when a kill came only from another addon (Q-013).
 
 ## The addons
@@ -128,7 +184,7 @@ Popularity is CurseForge downloads as of 2026-11-25.
 - **Ignored:** hit-list releases `J`/`A`, bounties `B`, avenged `V`/`E`, sightings `S`/`T`, help calls on `DeathNoteSOS`, hellos `H`.
 - **Saved data:**
   - `DeathNoteDB` holds `enemies` with per-killer `deaths`, a `guild.lists[guildName]` book, and a `friends` book (`Store.lua:376-377`, `783-790`; `Sync.lua:733-742`).
-  - Imported read-only at login and every 2 minutes while Revenge Book is loaded. This is how friends' data that only reached your own Revenge Book gets in.
+  - Imported read-only, time-sliced, after login and then at most every 10 minutes while Revenge Book is loaded. This is how friends' data that only reached your own Revenge Book gets in.
   - Its internal event bus (`_G.DeathNote:On`) is not used, since it's undocumented and may change.
 - **Churn:** ten releases in two weeks. The protocol digit stays `1`, but types are added.
 
@@ -169,11 +225,14 @@ Popularity is CurseForge downloads as of 2026-11-25.
 
 ## Order and effort
 
-1. **The source layer** (IMP-013): registry, records, name cache, trust and merge, with Revenge's own deaths flowing through it. It comes before the tooltip, so everything after builds on it.
-2. **Revenge Book** (IMP-014): its guild messages and saved data, right after the tooltip and list. You run it, so this brings in shared data before Revenge's own sharing exists.
-3. **Revenge's own sharing and catch-up** (IMP-005, IMP-006): as planned.
-4. **Grudgekeeper** (IMP-015), then **HeadHunter** (IMP-016), then **Kill on Sight** (IMP-017).
-5. **Wanted: Dead or... Dead:** only if asked, and then only its guild kill-on-sight list (`WNTDK`), which needs the two libraries.
+Other addons are low priority (DEC-020), so they come after everything else:
+
+1. **The core source layer** (IMP-013): records, name cache, trust and merge, with Revenge's own deaths flowing through it, and the `SubmitForeign` door with its validation. This is core, so it's built early, right after recording.
+2. **All core features and Revenge's first release**, with no other-addon code in it.
+3. **The optional module** (IMP-018): load-on-demand folder, master switch, queue and time budget, circuit breakers, status lines. It's tested with deliberately broken fake adapters before any real one.
+4. **Revenge Book** (IMP-014): first, because you run it.
+5. **Grudgekeeper** (IMP-015), then **HeadHunter** (IMP-016), then **Kill on Sight** (IMP-017), each only if the one before proved worth it.
+6. **Wanted: Dead or... Dead:** only if asked, and then only its guild kill-on-sight list (`WNTDK`), which needs the two libraries.
 
 Testing each adapter needs sample messages, built from the formats above and kept as fixtures. They're decoded offline under a Lua 5.1 interpreter (not yet installed), then checked in game with a guildmate or friend running that addon.
 
