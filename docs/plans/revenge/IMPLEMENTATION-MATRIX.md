@@ -9,11 +9,11 @@
 
 | Row | REQ IDs | Target(s) | Slice / observable result | Dependencies / order | Owner | Implementation files | Status | Validation IDs / remaining work |
 |---|---|---|---|---|---|---|---|---|
-| IMP-001 | 013, 014, 015, 016, 018 | forever | S01: the addon loads; saved data with defaults; English locale table; empty "Revenge" settings category; `/revenge` opens it | Q-001 answered; mock-up accepted | Claude | `RevengeTracker.toc`, `Core.lua`, `Locales/enUS.lua`, `Settings.lua` | planned | V-001, V-002 |
-| IMP-002 | 001, 002, 017 | forever | S02: an open-world death records the enemy players from the death recap; instance and duel deaths are ignored; a debug-only command injects sample deaths | IMP-001 | Claude | `Deaths.lua`, `Store.lua` | planned | V-001, V-003 |
-| IMP-013 | 024, 025, 001 | forever | S13: the core source layer: normalized records, name cache, trust filter, merge (own data wins) and the validating `SubmitForeign` door; Revenge's own deaths flow through it | IMP-002 | Claude | `Sources/Revenge.lua`, `Identity.lua`, `Merge.lua`, `Store.lua`, `Foreign.lua` | planned | V-001, V-014 |
+| IMP-001 | 013, 014, 015, 016, 018 | forever | S01: the addon loads; saved data with defaults and validation; English locale table; "Revenge" settings category with the expiry slider and details-key dropdown; `/revenge` opens it | Q-001 answered; mock-up accepted | Claude | `RevengeTracker/RevengeTracker.toc`, `Core.lua`, `Store.lua`, `Locales/enUS.lua`, `Settings.lua` | implemented | V-001 pass; V-002 not run |
+| IMP-002 | 001, 002, 017 | forever | S02: an open-world death records the hostile players from the death recap (retried at 0.3, 1 and 2.5 s; same-faction players skipped); instance deaths ignored. `/revenge test` records a test kill by the current target; `/revenge test clear` removes them. Kills by pets alone aren't counted yet | IMP-001 | Claude | `RevengeTracker/Deaths.lua` | implemented | V-001 pass; V-003 not run |
+| IMP-013 | 024, 025, 001 | forever | S13: the core source layer: normalized kill records, name cache (GUID → full name, class, level, guild, faction; from target, mouseover and nameplates), merge with deduplication and tombstones (own data wins), and the validating `SubmitForeign` door (`RevengeTracker.SubmitForeign`). Revenge's own deaths flow through it. The trust filter and the own-protocol source (`Sources/Revenge.lua`) arrive with sharing in S05 | IMP-002 | Claude | `RevengeTracker/Identity.lua`, `Merge.lua`, `Foreign.lua`, `Store.lua` | implemented (trust filter: S05) | V-001 pass; V-014 not run (needs Lua 5.1) |
 | IMP-018 | 030, 032 | forever | S18: the optional module `RevengeTracker_OtherAddons`: load on demand behind the master switch, prefix routing, pre-checks, bounded queue with a 0.5 ms/frame budget, combat pause, silent `pcall`, per-adapter circuit breaker, status lines; tested with deliberately broken fake adapters | IMP-013, IMP-004, IMP-011 | Claude | `RevengeTracker_OtherAddons/*.toc`, `Host.lua`, `Queue.lua`, `Breaker.lua`; core `Settings.lua` | planned | V-001, V-019 |
-| IMP-003 | 003, 004, 012, 021 | forever | S03: hovering a recorded enemy shows the one skull line (or "Wanted by …"); holding the modifier (Shift) adds the detail lines; expiry respected | IMP-013 | Claude | `Tooltip.lua` | planned | V-001, V-004 |
+| IMP-003 | 003, 004, 012, 021 | forever | S03: hovering a recorded enemy shows the one skull line "(N) You, …, +N more"; holding the details key (Shift by default) adds up to 5 lines (victim · zone · time ago) and redraws on key change; expiry respected. The "Wanted by" line comes with S04 | IMP-013 | Claude | `RevengeTracker/Tooltip.lua` | implemented (Wanted line: S04) | V-001 pass; V-004 not run |
 | IMP-004 | 011, 012, 013, 021 | forever | S04: settings show the expiry slider, the modifier choice, and the list of recent killers with remove and add-by-name (which marks the player "Wanted by you") | IMP-002 | Claude | `Settings.lua`, `List.lua` | planned | V-001, V-005 |
 | IMP-005 | 005, 006, 021 | forever | S05: guild sharing; send own deaths and Wanted players, receive guildmates', deduplicate, rate-limit; catch-up on login if Q-010 is accepted | IMP-002, IMP-004 | Claude | `Share.lua`, `Protocol.lua` | planned | V-001, V-006 |
 | IMP-006 | 005, 006, 021 | forever | S06: in-game friends (whisper) and Battle.net friends (game data), with a hello so only friends running Revenge are messaged | IMP-005 | Claude | `Share.lua` | planned | V-001, V-007 |
@@ -39,7 +39,7 @@ Statuses: `planned`, `in progress`, `implemented`, `verified`, `blocked`, `defer
 
 | ID | REQ IDs / slice | Target and observed build | Mode | Exact addon revision / dirty-state reference | Procedure / fixture and expected result | Observed result / evidence path | Status |
 |---|---|---|---|---|---|---|---|
-| V-001 | all / every slice | forever; n/a | static | per slice | `luacheck` with a `.luacheckrc` for WoW globals: 0 warnings. A Lua 5.1 syntax scan for `//`, `goto`, `::label::`, `bit32`, `table.pack` and `utf8` (luacheck 1.2.0 parses newer Lua, so it doesn't catch these). Check the TOC file list | | not run |
+| V-001 | all / every slice | forever; n/a | static | S01–S03 on `dev/core-s01-s03` | `luacheck .` with `.luacheckrc` (WoW globals): 0 warnings. `python -I tools/check_lua51.py` flags `//`, `goto`, labels, `bit32`, `table.pack`, `utf8` and bitwise operators (luacheck 1.2.0 parses newer Lua, so it misses these; the scanner was self-tested on a file with 5 known problems). Check the TOC file list | S01–S03: luacheck 0 warnings / 0 errors in 9 files; scanner 0 problems; TOC lists all 9 files (2026-11-25) | pass (S01–S03) |
 | V-002 | 013, 014, 015 / S01 | forever 1.60.1 | in-game | | Load with Revenge Book and luisjedev's Revenge enabled; open Options > AddOns > Revenge; `/reload`; no Bugsy errors | | not run |
 | V-003 | 001, 002, 017 / S02 | forever 1.60.1 | in-game | | Open-world PvP death: entry recorded. Dungeon or battleground death and a duel: nothing recorded. Bugsy clean | | not run |
 | V-004 | 003, 004, 012 / S03 | forever 1.60.1 | in-game | | With sample data, hover the killer: one skull line with the right count and names; hold Shift: detail lines; set the modifier to Off: none; expire a kill: the count drops | | not run |
@@ -65,7 +65,7 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 
 | REQ / row IDs | State | Cause or scope decision / source | Next action and owner | Effect on delivery |
 |---|---|---|---|---|
-| all IMP rows | waiting | The other-addon plan (DEC-019) awaits the user's review: Q-012, Q-013, Q-014 | User reviews OTHER-ADDONS.md | No code until then |
+| V-014 (offline) | waiting | No Lua 5.1 interpreter on this machine | Agent asks the user to approve a download, then writes fixture tests | Merge rules verified only by review and in-game use until then |
 | REQ-031 | deferred | Wanted: Dead or... Dead needs its faction channel (against REQ-024) and two libraries (against REQ-018) | Revisit only if the user asks, starting with its guild kill-on-sight list | Its users' data won't reach Revenge |
 | Spy family (Q-014) | blocked | No public source for Spy (Forever), True Spy, Spy Guild KOS Sync, PlayerNotes & KoS | User decides on Q-014 | No adapters for them |
 
@@ -77,10 +77,14 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 - Working tree: clean after the mock-up commit
 - Last completed slice: none (planning)
 - Last verified state: none
-- Current slice and pending edits: the other-addon plan ([OTHER-ADDONS.md](OTHER-ADDONS.md)) on branch `plan/addon-interop`, awaiting the user's review. The mock-up (version 8) is accepted and merged into local `main`
-- Next executable action: get the user's answers to Q-012, Q-013 and Q-014; merge `plan/addon-interop`; install a Lua 5.1 interpreter for offline fixture tests (needs the user's OK to download); then start IMP-001
-- Open questions / blockers: Q-012, Q-013, Q-014 (other addons), Q-009 (at testing). Resolved: Q-001 to Q-008, Q-010, Q-011
-- Decisions to retain: DEC-001 to DEC-020 (DEC-020: other addons are low priority, isolated in an optional module, silent on failure, built after the first release)
+- Current slice and pending edits: S01, S02, S13 and S03 implemented on `dev/core-s01-s03`, static checks pass, nothing tested in game yet. The plan (all of `plan/addon-interop`) is merged into local `main`. The addon folder is linked into the game with a junction: `_forever_\Interface\AddOns\RevengeTracker` → `RevengeTracker\` in this repo
+- Next executable action: the user runs V-002, V-003 and V-004 in game:
+  - `/reload`; Revenge listed in AddOns; Options › AddOns › Revenge shows the slider and dropdown.
+  - Target any player, `/revenge test`, hover them: one skull line; hold Shift: detail line.
+  - Check Bugsy (`/bugsy`). The agent reads `WTF\Account\KYMRELL\SavedVariables\RevengeTracker.lua` and `!Bugsy.lua` after a `/reload`.
+  - Then S04 (settings list, add by name, Wanted). Offline merge tests (V-014) wait for a Lua 5.1 interpreter (download needs the user's OK).
+- Open questions / blockers: Q-009 (at testing). Resolved: Q-001 to Q-008, Q-010 to Q-014 (DEC-021)
+- Decisions to retain: DEC-001 to DEC-021 (DEC-020: other addons are low priority, isolated in an optional module, silent on failure, built after the first release; DEC-021: other-addon plan approved as proposed)
 - Testing choice: pending; Bugsy installed for error capture
 - Controller assessment: settings list and map pins pending checks; everything else passive
 - Options/localization: REQ-013 and REQ-014; English only

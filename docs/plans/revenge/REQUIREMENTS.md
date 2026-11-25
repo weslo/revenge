@@ -138,6 +138,7 @@
 | DEC-017 / 2026-11-25 | User, in chat | Catch-up for friends who were offline, as proposed | 022 | REQ-022 added |
 | DEC-018 / 2026-11-25 | User, in chat | Wanted entries don't expire; only their adder withdraws them for everyone | 023 | REQ-023 added |
 | DEC-019 / 2026-11-25 | User, in chat | Add a layer that takes in messages from other popular addons (like Revenge Book) and deduplicates as well as possible; plan it before implementation starts | 024+ | See OTHER-ADDONS.md |
+| DEC-021 / 2026-11-25 | User, in chat: "Approved, begin development" | The other-addon plan as proposed: no reports from strangers (Q-012), grey "via Revenge Book" in Shift details (Q-013), Spy and relatives left out for now (Q-014) | 024–032 | Development started with S01 |
 | DEC-020 / 2026-11-25 | User, in chat | Other addons are low priority for performance and maintenance. Failures are silently disregarded and can't affect performance or functionality, and there's an easy off switch | 024, 026–030, 032 | Optional load-on-demand module; adapters built after the core and its first release; REQ-032 added |
 
 ## Completion criteria
