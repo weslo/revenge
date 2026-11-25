@@ -112,6 +112,7 @@
 | Q-010 | Catch-up for friends who were offline | 005, 006, 021 | resolved | Agreed as proposed (DEC-017, REQ-022) |
 | Q-012 | Accept other addons' reports from players who aren't guildmates or friends (HeadHunter gossip, public channels)? Proposal: never | 006, 024, 028 | Affects the trust filter only | pending (user) |
 | Q-013 | Show "via Revenge Book" in Shift details? Proposal: yes, grey, only when no Revenge user reported the kill | 004, 030 | Display only | pending (user) |
+| Q-015 | Which other addon to support first, now that the user doesn't run Revenge Book (DEC-022): Revenge Book (if guildmates use it) or Grudgekeeper? | 026, 027 | Decided when S18 starts; nothing blocked before then | pending (user, at S18) |
 | Q-014 | Spy (Forever), True Spy, Spy Guild KOS Sync and PlayerNotes & KoS have no public source. Install one through the CurseForge app so the agent can read the installed files, or leave them out? | 024 | Blocks any adapter for them | pending (user) |
 | Q-011 | How Wanted entries end | 011, 012, 021 | resolved | Agreed as proposed (DEC-018, REQ-023) |
 
@@ -125,7 +126,7 @@
 | DEC-004 / 2026-11-25 | User | Open-world deaths only | 002 | none |
 | DEC-005 / 2026-11-25 | User | Name "revenge"; a public GitHub repo, created by the agent once this plan is approved | 015, 016 | See Q-001 for internal names |
 | DEC-006 / 2026-11-25 | User | Mock-up before implementation | UI REQs | Mock-up is the next step |
-| DEC-007 / 2026-11-25 | User (earlier) | Keep Revenge Book installed alongside | 015 | Test both loaded together |
+| DEC-007 / 2026-11-25 | User (earlier) | Keep Revenge Book installed alongside | 015 | Superseded by DEC-022 (uninstalled) |
 | DEC-008 / 2026-11-25 | Implementation | Trust rules for shared data: only from guildmates and friends, deduplicated, rate-limited, hostile killers only | 006 | Revisit if friends report missing deaths |
 | DEC-009 / 2026-11-25 | User, mock-up comment on the tooltip | Everyone in the kill counts as a killer; no "helped" label | 001, 003, 004 | Q-002 resolved; killer-rule tweak removed |
 | DEC-010 / 2026-11-25 | User, mock-up comment on the tooltip | The tooltip is one line, "💀 (N) names, +N more"; details only while a modifier (Shift) is held | 003, 004, 013 | Modifier choice added to settings |
@@ -138,6 +139,7 @@
 | DEC-017 / 2026-11-25 | User, in chat | Catch-up for friends who were offline, as proposed | 022 | REQ-022 added |
 | DEC-018 / 2026-11-25 | User, in chat | Wanted entries don't expire; only their adder withdraws them for everyone | 023 | REQ-023 added |
 | DEC-019 / 2026-11-25 | User, in chat | Add a layer that takes in messages from other popular addons (like Revenge Book) and deduplicates as well as possible; plan it before implementation starts | 024+ | See OTHER-ADDONS.md |
+| DEC-022 / 2026-11-25 | User, in chat: "Uninstall Revenge Book" | Revenge Book is no longer installed here. Coexistence (REQ-015) is still kept for other users. The Revenge Book adapter (REQ-026) now matters only when guildmates run it, and its saved-data import only for users who run both | 015, 026; supersedes DEC-007 | Which adapter comes first is decided when S18 starts (Q-015) |
 | DEC-021 / 2026-11-25 | User, in chat: "Approved, begin development" | The other-addon plan as proposed: no reports from strangers (Q-012), grey "via Revenge Book" in Shift details (Q-013), Spy and relatives left out for now (Q-014) | 024–032 | Development started with S01 |
 | DEC-020 / 2026-11-25 | User, in chat | Other addons are low priority for performance and maintenance. Failures are silently disregarded and can't affect performance or functionality, and there's an easy off switch | 024, 026–030, 032 | Optional load-on-demand module; adapters built after the core and its first release; REQ-032 added |
 

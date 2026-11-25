@@ -160,7 +160,7 @@ Popularity is CurseForge downloads as of 2026-11-25.
 
 | Addon (downloads) | What reaches a listener on Forever | Plan |
 |---|---|---|
-| **Revenge Book** 1.6.4 (3.9k; you run it) | Everything on GUILD, including answers to others' catch-up requests. Friends' whisper and Battle.net data needs Revenge to send a hello, but your own copy stores it in `DeathNoteDB` | **Adapter 1**: guild messages and saved data |
+| **Revenge Book** 1.6.4 (3.9k; you uninstalled it 2026-11-25, DEC-022) | Everything on GUILD, including answers to others' catch-up requests. Friends' whisper and Battle.net data needs Revenge to send a hello, but a user running both has it in `DeathNoteDB` | **Adapter candidate**: guild messages, plus saved data for users who run both |
 | **Grudgekeeper** 1.13.1 (2.2k) | Everything on GUILD, plain `;` text; long messages are probably AceComm-chunked | **Adapter 2**: guild deaths, assists and kill orders |
 | **HeadHunter** 1.1.x (31k) | Its realm channel can't carry addon messages on Forever. Reports go by PARTY/RAID, or to random players by whisper | **Adapter 3**: party/raid and whispers from guildmates and friends, plus saved data while it's loaded |
 | **Kill on Sight** 4.0.1 Forever (67k) | Nothing: the Forever build removed its sync | **Adapter 4**: its KoS list, from saved data, as Wanted marks |
@@ -230,8 +230,8 @@ Other addons are low priority (DEC-020), so they come after everything else:
 1. **The core source layer** (IMP-013): records, name cache, trust and merge, with Revenge's own deaths flowing through it, and the `SubmitForeign` door with its validation. This is core, so it's built early, right after recording.
 2. **All core features and Revenge's first release**, with no other-addon code in it.
 3. **The optional module** (IMP-018): load-on-demand folder, master switch, queue and time budget, circuit breakers, status lines. It's tested with deliberately broken fake adapters before any real one.
-4. **Revenge Book** (IMP-014): first, because you run it.
-5. **Grudgekeeper** (IMP-015), then **HeadHunter** (IMP-016), then **Kill on Sight** (IMP-017), each only if the one before proved worth it.
+4. **The first adapter:** Revenge Book (IMP-014) if guildmates use it, otherwise Grudgekeeper (IMP-015). You no longer run Revenge Book (DEC-022), so this is decided when S18 starts (Q-015).
+5. The rest in order: **Grudgekeeper** or **Revenge Book**, then **HeadHunter** (IMP-016), then **Kill on Sight** (IMP-017). Each one is built only if the one before proved worth it.
 6. **Wanted: Dead or... Dead:** only if asked, and then only its guild kill-on-sight list (`WNTDK`), which needs the two libraries.
 
 Testing each adapter needs sample messages, built from the formats above and kept as fixtures. They're decoded offline under a Lua 5.1 interpreter (not yet installed), then checked in game with a guildmate or friend running that addon.
