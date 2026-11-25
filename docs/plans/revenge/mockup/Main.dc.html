@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Revenge tooltip lines</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8fb8ff}a:hover{color:#b8d2ff}
+</style>
+</helmet>
+<div style="width: 880px; height: 600px; box-sizing: border-box; padding: 48px; background: #15181c; font-family: Inter, system-ui, sans-serif; color: #e6e9ed; display: flex; flex-direction: column; gap: 28px">
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #f2f4f6">Hovering an enemy player</h1>
+    <p style="margin: 0; font-size: 14px; color: #a3acb6">Revenge adds its lines under the game&#39;s own tooltip. Rule shown: {{ruleLabel}}.</p>
+  </div>
+  <div style="display: flex; gap: 40px; align-items: flex-start">
+    <div style="display: flex; flex-direction: column; gap: 10px; width: 380px">
+      <div style="font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: #a3acb6">Killed you and two friends</div>
+      <div style="box-sizing: border-box; width: 380px; background: #080a12; border: 2px solid #565c68; border-radius: 6px; padding: 10px 14px 12px; font-family: &#39;Alegreya Sans&#39;, sans-serif; font-size: 16px; line-height: 1.35; display: flex; flex-direction: column; gap: 1px">
+        <div style="font-size: 18px; font-weight: 700; color: #ff6b5e">Gorvak Ashmane</div>
+        <div style="color: #ffffff">&lt;Bloodfang Raiders&gt;</div>
+        <div style="color: #ffffff">Level 41 Orc Rogue (Player)</div>
+        <sc-if value="{{gorvak.has}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 1px; margin-top: 6px">
+            <div style="display: flex; align-items: center; gap: 6px; color: #ff8c6e; font-weight: 500">
+              <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c-3.3 0-5.5 2.3-5.5 5.2 0 1.8.9 3.1 2 3.9v2.4h1.8v-1.5h1.4v1.5h1.6v-1.5h1.4v1.5h1.8v-2.4c1.1-.8 2-2.1 2-3.9 0-2.9-2.2-5.2-5.5-5.2z" fill="#ff8c6e"></path><circle cx="5.8" cy="7" r="1.3" fill="#080a12"></circle><circle cx="10.2" cy="7" r="1.3" fill="#080a12"></circle></svg>
+              <span>{{gorvak.summary}}</span>
+            </div>
+            <sc-if value="{{showDetails}}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{gorvak.lines}}" as="line" hint-placeholder-count="3">
+                <div style="padding-left: 21px; font-size: 15px; color: #c9ced6">{{line.text}}<sc-if value="{{line.helped}}" hint-placeholder-val="{{ false }}"><span style="color: #9aa3ad"> · helped</span></sc-if></div>
+              </sc-for>
+              <sc-if value="{{gorvak.hasMore}}" hint-placeholder-val="{{ true }}">
+                <div style="padding-left: 21px; font-size: 15px; color: #9aa3ad">{{gorvak.more}}</div>
+              </sc-if>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; width: 364px">
+      <div style="font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: #a3acb6">Helped in that gank</div>
+      <div style="box-sizing: border-box; width: 364px; background: #080a12; border: 2px solid #565c68; border-radius: 6px; padding: 10px 14px 12px; font-family: &#39;Alegreya Sans&#39;, sans-serif; font-size: 16px; line-height: 1.35; display: flex; flex-direction: column; gap: 1px">
+        <div style="font-size: 18px; font-weight: 700; color: #ff6b5e">Shazra Vex</div>
+        <div style="color: #ffffff">&lt;Bloodfang Raiders&gt;</div>
+        <div style="color: #ffffff">Level 39 Troll Hunter (Player)</div>
+        <sc-if value="{{shazra.has}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 1px; margin-top: 6px">
+            <div style="display: flex; align-items: center; gap: 6px; color: #ff8c6e; font-weight: 500">
+              <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c-3.3 0-5.5 2.3-5.5 5.2 0 1.8.9 3.1 2 3.9v2.4h1.8v-1.5h1.4v1.5h1.6v-1.5h1.4v1.5h1.8v-2.4c1.1-.8 2-2.1 2-3.9 0-2.9-2.2-5.2-5.5-5.2z" fill="#ff8c6e"></path><circle cx="5.8" cy="7" r="1.3" fill="#080a12"></circle><circle cx="10.2" cy="7" r="1.3" fill="#080a12"></circle></svg>
+              <span>{{shazra.summary}}</span>
+            </div>
+            <sc-if value="{{showDetails}}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{shazra.lines}}" as="line" hint-placeholder-count="1">
+                <div style="padding-left: 21px; font-size: 15px; color: #c9ced6">{{line.text}}<sc-if value="{{line.helped}}" hint-placeholder-val="{{ true }}"><span style="color: #9aa3ad"> · helped</span></sc-if></div>
+              </sc-for>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #a3acb6">{{shazraNote}}</p>
+    </div>
+  </div>
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.45; color: #a3acb6">
+    <div>Up to 3 recent kills are listed, newest first; older ones fold into &#8220;+N more&#8221;. Kills older than the expiry (7 days by default) drop off.</div>
+    <div>Use Tweaks to switch the killer rule and to hide the detail lines.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"killers":{"editor":"enum","options":["Everyone in the death recap","Killing blow only"],"default":"Everyone in the death recap"},"details":{"editor":"boolean","default":true},"$preview":{"width":880,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.killers ?? 'Everyone in the death recap';
+    const kbOnly = mode === 'Killing blow only';
+    const showDetails = this.props.details ?? true;
+    const join = (names) => names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+    const build = (kills) => {
+      const list = kills.filter((k) => !kbOnly || k.kb);
+      const you = list.filter((k) => k.you).length;
+      const others = [];
+      list.forEach((k) => { if (!k.you && others.indexOf(k.short) < 0) others.push(k.short); });
+      let summary = '';
+      if (you > 0) summary = 'Killed you ' + you + '×';
+      if (others.length) {
+        summary = summary ? summary + (others.length === 1 ? ' and ' : ', ') + join(others) : 'Killed ' + join(others);
+      }
+      const lines = list.slice(0, 3).map((k) => ({ text: [k.label, k.zone, k.ago].join(' · '), helped: !kbOnly && !k.kb }));
+      return { has: list.length > 0, summary, lines, hasMore: list.length > 3, more: '+' + Math.max(0, list.length - 3) + ' more' };
+    };
+    const gorvak = build([
+      { you: true, label: 'You', short: 'you', zone: 'Hillsbrad Foothills', ago: '2h ago', kb: true },
+      { you: false, label: 'Mira Thornwood (friend)', short: 'Mira', zone: 'Duskwood', ago: '1d ago', kb: true },
+      { you: false, label: 'Tavish Brightforge (guild)', short: 'Tavish', zone: 'Stranglethorn Vale', ago: '3d ago', kb: false },
+      { you: true, label: 'You', short: 'you', zone: 'Arathi Highlands', ago: '5d ago', kb: true }
+    ]);
+    const shazra = build([
+      { you: true, label: 'You', short: 'you', zone: 'Hillsbrad Foothills', ago: '2h ago', kb: false }
+    ]);
+    const shazraNote = kbOnly
+      ? 'No Revenge line: Shazra was in your death recap but Gorvak landed the killing blow.'
+      : 'Shazra damaged you in the same gank, so she counts too, marked "helped".';
+    return { gorvak, shazra, showDetails, shazraNote, ruleLabel: kbOnly ? 'killing blow only' : 'everyone in the death recap' };
+  }
+}
+</script>
+</body>
+</html>

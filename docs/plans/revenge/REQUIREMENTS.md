@@ -44,7 +44,8 @@
 ## UI and accepted design
 
 - Mock-up choice and source: **mock-up first** (user, 2026-11-25).
-- Accepted design: none yet. The mock-up covers the tooltip lines, nameplate mark, settings list, both alerts and map pins.
+- Accepted design: none yet. The mock-up for review is canvas version 6 (2026-11-25): source in [mockup/](mockup/README.md), live at the private artifact https://claude.ai/artifact/9M4d6XpfKVF8XftFNd8Ncs. It covers the tooltip lines, nameplate mark, settings list, both alerts and map pins, with tweaks for Q-002 (killer rule), Q-003 (add by name) and the mark style.
+- Defaults shown in the mock-up, to confirm: 7 days; details, nameplate mark, map pins, both alerts, the alert sound and all three sharing channels on. The killer-nearby alert repeats at most once every 5 minutes per player.
 - Relevant REQ IDs: 003, 004, 007–011, 013.
 - Style: the game's own tooltip, settings and map-pin look; subtle, no custom skin.
 
@@ -82,6 +83,8 @@
 | Q-003 | Should the settings list also allow adding an enemy by name? (Default: view and remove only.) | 011 | Settle in the mock-up | pending (user) |
 | Q-004 | Should Revenge also read Revenge Book's shared messages, so friends using Revenge Book count too? (Default: no; its protocol is undocumented and may change.) | 005, 006 | Later; not in the first release | pending (user) |
 | Q-005 | A shared death whose killer is on your own faction (from a Battle.net friend on the other faction) is dropped. | 006 | Implementation detail | assumption (DEC-008) |
+| Q-006 | Nameplate mark style: skull, crosshair or dot (the mock-up's tweak)? | 007 | Settle in the mock-up | pending (user) |
+| Q-007 | Defaults: everything on (see "UI and accepted design"), or some alerts or sharing channels off by default? | 008, 009, 013 | Settle in the mock-up | pending (user) |
 
 ## Decisions and scope changes
 

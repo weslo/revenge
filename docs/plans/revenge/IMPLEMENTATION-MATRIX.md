@@ -46,19 +46,19 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 
 | REQ / row IDs | State | Cause or scope decision / source | Next action and owner | Effect on delivery |
 |---|---|---|---|---|
-| all IMP rows | waiting | Mock-up first (DEC-006); internal name pending (Q-001) | Claude builds the mock-up; user reviews it and answers Q-001 to Q-003 | No code until then |
+| all IMP rows | waiting | Mock-up first (DEC-006); internal name pending (Q-001) | Mock-up built (canvas version 6); the user reviews it and answers Q-001, Q-002, Q-003, Q-006 and Q-007 | No code until then |
 
 ## Resume checkpoint
 
 - Updated by / at: Claude, 2026-11-25 (planning)
-- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`; not yet a git repository; GitHub repo not yet created
-- Exact HEAD revision: no commit
-- Working tree: `docs/plans/revenge/REQUIREMENTS.md` and `IMPLEMENTATION-MATRIX.md` only
-- Last completed slice: none
+- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`, GitHub `weslo/revenge` (public). `main` holds the plan (`09cb1b2`); branch `plan/ui-mockup` adds the mock-up record (local, not pushed)
+- Exact HEAD revision: see `git log -1` on `plan/ui-mockup`
+- Working tree: clean after the mock-up commit
+- Last completed slice: none (planning)
 - Last verified state: none
-- Current slice and pending edits: none
-- Next executable action: build the UI mock-up (REQ-003, 004, 007–011, 013) with sample data; get the user's acceptance and answers to Q-001 to Q-003; then `git init`, create the public GitHub repo with `gh repo create`, commit the plan, and start IMP-001
-- Open questions / blockers: Q-001 (blocks IMP-001), Q-002, Q-003 (settle in the mock-up), Q-004 (later)
+- Current slice and pending edits: the UI mock-up (canvas version 6) is awaiting the user's review
+- Next executable action: get the user's answers on the mock-up (Q-001, Q-002, Q-003, Q-006, Q-007); record the accepted design revision in REQUIREMENTS.md; merge `plan/ui-mockup`; then start IMP-001
+- Open questions / blockers: Q-001 (blocks IMP-001), Q-002, Q-003, Q-006, Q-007 (settle in the mock-up), Q-004 (later)
 - Decisions to retain: DEC-001 to DEC-008
 - Testing choice: pending; Bugsy installed for error capture
 - Controller assessment: settings list and map pins pending checks; everything else passive
