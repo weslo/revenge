@@ -10,7 +10,7 @@
 --
 -- Two reports are the same kill when they share the victim, at least one killer,
 -- a time within the window (2 min when both are exact, 10 min otherwise) and the
--- zone when both give one. Revenge's own data wins any disagreement.
+-- map when both give a map ID. Revenge's own data wins any disagreement.
 local _, ns = ...
 
 local Merge = ns.RegisterModule("Merge", {})
@@ -33,9 +33,10 @@ local function SharesKiller(a, b)
     return false
 end
 
+-- Only map IDs decide. Zone names can't: other addons send them in their user's
+-- game language ("Dämmerwald" for "Duskwood"), which would split one death in two.
 local function SameZone(a, b)
     if a.mapID and b.mapID then return a.mapID == b.mapID end
-    if a.zone and b.zone then return a.zone == b.zone end
     return true
 end
 

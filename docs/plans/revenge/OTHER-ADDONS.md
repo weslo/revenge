@@ -133,7 +133,7 @@ Revenge's own protocol is one more source (`Sources/Revenge.lua`) on the core's 
   - the same victim;
   - at least one killer in common;
   - times within **2 minutes** when both are `exact`, or **10 minutes** otherwise;
-  - the same zone when both report one (`mapID` first, then zone text, since zone names can be localized).
+  - the same map when both give a map ID. Zone names are ignored: other addons send them in their user's game language ("Dämmerwald" for "Duskwood"), which would split one death in two (found by the offline tests, 2026-11-25).
 - **What a merge keeps:**
   - the most precise time and position;
   - the union of killers, preferring entries with GUID, class and level;

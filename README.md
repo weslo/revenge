@@ -13,6 +13,9 @@ get your revenge.
   then `/reload` in game after each change.
 - Static checks: `luacheck .` (config in `.luacheckrc`), and `python -I tools/check_lua51.py`. The second
   flags Lua 5.2+ syntax that luacheck 1.2.0 accepts but WoW's Lua 5.1 can't run.
+- Offline tests run under real Lua 5.1 against a mock of the game's API (`tests/wow_mock.lua`):
+  set up once with `python -m venv .venv` and `.venv\Scripts\python.exe -m pip install lupa==2.8`,
+  then run `.venv\Scripts\python.exe -I tests\run.py` (optionally with a test-name filter).
 - In game: `/revenge` opens the settings, `/revenge test` records a test kill by your target, and
   `/revenge test clear` removes those. `/revenge debug` toggles a debug log.
 
