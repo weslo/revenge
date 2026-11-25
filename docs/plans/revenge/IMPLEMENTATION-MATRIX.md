@@ -11,7 +11,8 @@
 |---|---|---|---|---|---|---|---|---|
 | IMP-001 | 013, 014, 015, 016, 018 | forever | S01: the addon loads; saved data with defaults; English locale table; empty "Revenge" settings category; `/revenge` opens it | Q-001 answered; mock-up accepted | Claude | `RevengeTracker.toc`, `Core.lua`, `Locales/enUS.lua`, `Settings.lua` | planned | V-001, V-002 |
 | IMP-002 | 001, 002, 017 | forever | S02: an open-world death records the enemy players from the death recap; instance and duel deaths are ignored; a debug-only command injects sample deaths | IMP-001 | Claude | `Deaths.lua`, `Store.lua` | planned | V-001, V-003 |
-| IMP-003 | 003, 004, 012, 021 | forever | S03: hovering a recorded enemy shows the one skull line (or "Wanted by …"); holding the modifier (Shift) adds the detail lines; expiry respected | IMP-002 | Claude | `Tooltip.lua` | planned | V-001, V-004 |
+| IMP-013 | 024, 025, 001 | forever | S13: the source layer: registry, normalized records, name cache, trust filter and merge; Revenge's own deaths flow through it | IMP-002 | Claude | `Sources/Registry.lua`, `Sources/Revenge.lua`, `Identity.lua`, `Merge.lua`, `Store.lua` | planned | V-001, V-014 |
+| IMP-003 | 003, 004, 012, 021 | forever | S03: hovering a recorded enemy shows the one skull line (or "Wanted by …"); holding the modifier (Shift) adds the detail lines; expiry respected | IMP-013 | Claude | `Tooltip.lua` | planned | V-001, V-004 |
 | IMP-004 | 011, 012, 013, 021 | forever | S04: settings show the expiry slider, the modifier choice, and the list of recent killers with remove and add-by-name (which marks the player "Wanted by you") | IMP-002 | Claude | `Settings.lua`, `List.lua` | planned | V-001, V-005 |
 | IMP-005 | 005, 006, 021 | forever | S05: guild sharing; send own deaths and Wanted players, receive guildmates', deduplicate, rate-limit; catch-up on login if Q-010 is accepted | IMP-002, IMP-004 | Claude | `Share.lua`, `Protocol.lua` | planned | V-001, V-006 |
 | IMP-006 | 005, 006, 021 | forever | S06: in-game friends (whisper) and Battle.net friends (game data), with a hello so only friends running Revenge are messaged | IMP-005 | Claude | `Share.lua` | planned | V-001, V-007 |
@@ -20,7 +21,13 @@
 | IMP-009 | 008 | forever | S09: optional alert when a recent killer comes into view, with a per-player cooldown | IMP-008 | Claude | `Alerts.lua` | planned | V-001, V-010 |
 | IMP-010 | 010, 020 | forever | S10: skull pins on the world map at recent death locations, coloured by group, with hover details and right-click "Dismiss kill" | IMP-002 | Claude | `MapPins.lua` | planned | V-001, V-011 |
 | IMP-012 | 019 | forever | S12: the silent alert popup for both alerts: fades after about 4 seconds or on a click | IMP-007, IMP-009 | Claude | `Popup.lua` | planned | V-001, V-013 |
+| IMP-014 | 026, 030 | forever | S14: Revenge Book adapter: guild `K`/`R`/`L`/`M`/`X` and read-only `DeathNoteDB` import; first "Other addons" switch and status | IMP-013, IMP-004 | Claude | `Sources/RevengeBook.lua`, `Settings.lua` | planned | V-001, V-015 |
+| IMP-015 | 027 | forever | S15: Grudgekeeper adapter: guild `D` and `C`/`O` kill orders, with chunk reassembly | IMP-014 | Claude | `Sources/Grudgekeeper.lua` | planned | V-001, V-016 |
+| IMP-016 | 028 | forever | S16: HeadHunter adapter: party/raid and whispered `D` (with envelopes) from guildmates and friends; `HeadHunter_DB` while loaded | IMP-014 | Claude | `Sources/HeadHunter.lua` | planned | V-001, V-017 |
+| IMP-017 | 029 | forever | S17: Kill on Sight adapter: KoS list from `KillOnSightDB` as Wanted marks | IMP-014 | Claude | `Sources/KillOnSight.lua` | planned | V-001, V-018 |
 | IMP-011 | 016 | forever | S11: GitHub Actions release with the BigWigs packager (zip plus `release.json`); install through instawow | IMP-001 | Claude | `.github/workflows/release.yml`, `.pkgmeta` | planned | V-012 |
+
+Build order (DEC-019): S01 skeleton → S02 recording → **S13 source layer** → S03 tooltip → S04 settings list → **S14 Revenge Book** → S05 guild sharing and catch-up → S06 friends and Battle.net → S07 friend-killed alert → S08 nameplate skull → S09 nearby alert → S10 map pins → S12 popup → **S15 Grudgekeeper** → **S16 HeadHunter** → **S17 Kill on Sight** → S11 release. The release can move earlier if friends should test sooner.
 
 Statuses: `planned`, `in progress`, `implemented`, `verified`, `blocked`, `deferred`, `superseded`.
 
@@ -41,6 +48,11 @@ Statuses: `planned`, `in progress`, `implemented`, `verified`, `blocked`, `defer
 | V-011 | 010, 020 / S10 | forever 1.60.1 | in-game | | World map shows skull pins at sample death positions in the right colours, with hover details; right-click, Dismiss kill: that kill is gone everywhere | | not run |
 | V-012 | 016 / S11 | forever 1.60.1 | install | | Tag a release; `instawow install github:weslo/revenge` installs it; AddOns list shows it compatible | | not run |
 | V-013 | 019 / S12 | forever 1.60.1 | in-game | | Trigger each alert: one small silent popup, no screen effect; it fades by itself after about 4 seconds and at once on a click; off in settings: none | | not run |
+| V-014 | 024, 025 / S13 | offline, then forever 1.60.1 | static and in-game | | Offline (Lua 5.1): merge fixtures (same kill from two sources, first name only, 9-minute skew, dismissed then re-reported) give the expected store. In game: a malformed message from each prefix causes no Bugsy error | | not run |
+| V-015 | 026 / S14 | forever 1.60.1 | static and in-game, 2 clients | | Offline: decode Revenge Book `K`/`R`/`L`/`M`/`X` fixtures. In game: a guildmate running Revenge Book dies or marks someone; it shows once in Revenge; your own death with both addons loaded counts once | | not run |
+| V-016 | 027 / S15 | forever 1.60.1 | static and in-game, 2 clients | | Offline: decode `D`, `C` and chunked fixtures. In game: a guildmate's Grudgekeeper death and kill order show in Revenge | | not run |
+| V-017 | 028 / S16 | forever 1.60.1 | static and in-game, 2 clients | | Offline: decode group and envelope `D` fixtures. In game: a grouped friend's HeadHunter death shows; a stranger's whispered report is ignored | | not run |
+| V-018 | 029 / S17 | forever 1.60.1 | in-game | | With Kill on Sight loaded and a KoS entry, the player shows "Wanted by you" | | not run |
 
 Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), `stale`.
 
@@ -48,20 +60,22 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 
 | REQ / row IDs | State | Cause or scope decision / source | Next action and owner | Effect on delivery |
 |---|---|---|---|---|
-| all IMP rows | waiting | Mock-up first (DEC-006); internal name pending (Q-001) | Canvas version 8 applies the user's comments and "Wanted by"; the user accepts it and answers Q-001, Q-007, Q-010 and Q-011 | No code until then |
+| all IMP rows | waiting | The other-addon plan (DEC-019) awaits the user's review: Q-012, Q-013, Q-014 | User reviews OTHER-ADDONS.md | No code until then |
+| REQ-031 | deferred | Wanted: Dead or... Dead needs its faction channel (against REQ-024) and two libraries (against REQ-018) | Revisit only if the user asks, starting with its guild kill-on-sight list | Its users' data won't reach Revenge |
+| Spy family (Q-014) | blocked | No public source for Spy (Forever), True Spy, Spy Guild KOS Sync, PlayerNotes & KoS | User decides on Q-014 | No adapters for them |
 
 ## Resume checkpoint
 
 - Updated by / at: Claude, 2026-11-25 (planning)
-- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`, GitHub `weslo/revenge` (public). `main` holds the plan (`09cb1b2`); branch `plan/ui-mockup` adds the mock-up record (local, not pushed)
+- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`, GitHub `weslo/revenge` (public). GitHub `main` has only the first plan (`09cb1b2`). Local `main` also has the accepted mock-up (`bc05874`, not pushed). Branch `plan/addon-interop` adds the other-addon plan (local)
 - Exact HEAD revision: see `git log -1` on `plan/ui-mockup`
 - Working tree: clean after the mock-up commit
 - Last completed slice: none (planning)
 - Last verified state: none
-- Current slice and pending edits: the UI mock-up, canvas version 8 (the user's comments plus "Wanted by"), is awaiting acceptance
-- Next executable action: get the user's acceptance of version 8 and answers to Q-001, Q-007, Q-010 and Q-011; record the accepted design revision in REQUIREMENTS.md; merge `plan/ui-mockup`; then start IMP-001
-- Open questions / blockers: Q-001 (blocks IMP-001), Q-007, Q-010, Q-011 (settle at acceptance), Q-004 (later), Q-009 (at testing). Resolved: Q-002, Q-003, Q-006, Q-008
-- Decisions to retain: DEC-001 to DEC-015
+- Current slice and pending edits: the other-addon plan ([OTHER-ADDONS.md](OTHER-ADDONS.md)) on branch `plan/addon-interop`, awaiting the user's review. The mock-up (version 8) is accepted and merged into local `main`
+- Next executable action: get the user's answers to Q-012, Q-013 and Q-014; merge `plan/addon-interop`; install a Lua 5.1 interpreter for offline fixture tests (needs the user's OK to download); then start IMP-001
+- Open questions / blockers: Q-012, Q-013, Q-014 (other addons), Q-009 (at testing). Resolved: Q-001 to Q-008, Q-010, Q-011
+- Decisions to retain: DEC-001 to DEC-019
 - Testing choice: pending; Bugsy installed for error capture
 - Controller assessment: settings list and map pins pending checks; everything else passive
 - Options/localization: REQ-013 and REQ-014; English only

@@ -14,7 +14,7 @@
 
 | ID | Required behavior or constraint | Origin and source | Priority | Targets | Observable acceptance criteria | State |
 |---|---|---|---|---|---|---|
-| REQ-001 | When you die to enemy-faction players, record every enemy player in the death recap as a killer. Don't separate the killing blow from helpers. Store full name (Forever first and last name), realm, class, level, guild if seen, zone, map position and time. | User: original request; mock-up comment "Treat all participants in the kill as killers" (DEC-009) | 1 | forever | Die to two enemy players in the open world; both appear in the settings list with the zone and time | active |
+| REQ-001 | When you die to enemy-faction players, record every enemy player in the death recap as a killer. Don't separate the killing blow from helpers. Store full name (Forever first and last name, resolved through the name cache because the death recap gives first names only), realm, class, level, guild if seen, zone, map position and time. | User: original request; mock-up comment "Treat all participants in the kill as killers" (DEC-009) | 1 | forever | Die to two enemy players in the open world; both appear in the settings list with the zone and time | active |
 | REQ-002 | Only open-world deaths count: never battlegrounds, arenas, dungeons, raids, scenarios or duels. | User: "Open world only" (2026-11-25) | 1 | forever | A battleground or dungeon death adds nothing; a duel loss adds nothing | active |
 | REQ-003 | Hovering an enemy player with recent kills adds one line to the tooltip: a skull, the total of their recent kills, then up to 3 victim names and "+N more", e.g. "💀 (5) You, Mira, Tavish, +1 more". | User: original request; mock-up comment "simplify this tooltip info a ton. One line" (DEC-010) | 1 | forever | Hover a recorded killer: exactly one line appears. Hover anyone else: no line | active |
 | REQ-004 | While a modifier key is held (Shift by default; Ctrl, Alt or off in settings), the tooltip also lists recent kills, one line each: victim, zone and how long ago (up to 5, then "+N more"). | User: "Details on recent kills in hover tooltip"; mock-up comment "An optional modifier key (shift) expands the details" (DEC-010) | 1 | forever | Hover with Shift: the lines appear; release Shift: they go. With the setting off, Shift does nothing | active |
@@ -34,6 +34,16 @@
 | REQ-018 | Lightweight: no window beyond the settings panel and the small alert popup, no bundled libraries unless a requirement needs one, low memory and CPU. | User: wants something simpler than Revenge Book | 1 | forever | Folder well under 300 KB; no noticeable frame-time cost in a busy zone | active |
 | REQ-019 | Alerts (REQ-008, REQ-009) can also show as a subtle popup, on by default: small, near the top of the screen, silent, no screen-wide effects, fades after about 4 seconds, and fades at once when clicked. | User: mock-up comment "let's include an optional subtle popup that's defaulted to on" (DEC-014) | 3 | forever | An alert shows one small popup with no sound or screen effect; it fades by itself, and at once on a click; it can be switched off | active |
 | REQ-020 | Right-clicking a map pin offers "Dismiss kill", which removes that one kill everywhere: tooltip count, skull, list and map. | User: mock-up comment "Add option to right click -> dismiss kill" (DEC-012) | 3 | forever | Dismiss one of two kills by a player: the count drops by one; dismiss the last: the player's line, skull and pin go | active |
+| REQ-024 | All incoming data, Revenge's own and other addons', goes through one source layer: per-addon adapters → normalized records (KillReport, WantedMark, Withdrawal) → trust filter → identity resolution → merge → store. Listen only: never send in another addon's format, answer its handshakes or join its channels. | User: DEC-019 | 1 | forever | Disable any one adapter: the rest keep working; a malformed message from any source is dropped without a Lua error | active |
+| REQ-025 | Deduplicate across sources and channels: the same victim, a shared killer, times within 2 minutes (exact) or 10 minutes (otherwise), and the same zone when known make one kill. Same target and adder make one Wanted mark. Dismissals stick across sources. | User: "deduplicates as best as possible" (DEC-019) | 1 | forever | The same death reported by Revenge and Revenge Book counts once; a dismissed kill re-reported by another addon stays dismissed | active |
+| REQ-026 | Revenge Book adapter: guild messages `K`, `R`, `L` (kills on guildmates), `M` (Wanted), `X` (withdrawn), plus a read-only import of `DeathNoteDB` (own, guild and friends' books) at login and every 2 minutes while it's loaded. | User: "like RevengeBook" (DEC-019); evidence in [OTHER-ADDONS.md](OTHER-ADDONS.md) | 2 | forever | A guildmate running only Revenge Book dies to an enemy: that enemy shows the kill in your tooltip; a friend's kill stored in your Revenge Book shows too | active |
+| REQ-027 | Grudgekeeper adapter: guild `D` (deaths) and `C` kill orders (open: "Wanted by" the poster; closed: withdrawn), with reassembly of chunked messages. | DEC-019; evidence in OTHER-ADDONS.md | 3 | forever | A guildmate running Grudgekeeper dies or posts a kill order: it shows in Revenge | active |
+| REQ-028 | HeadHunter adapter: `D` death reports by PARTY/RAID or whisper (including envelopes) whose victim is the sender and a guildmate or friend, plus `HeadHunter_DB` while it's loaded. | DEC-019; evidence in OTHER-ADDONS.md | 3 | forever | A grouped friend running HeadHunter dies: the kill shows in Revenge | active |
+| REQ-029 | Kill on Sight adapter: its KoS list from `KillOnSightDB` saved data, as "Wanted by" its adder. | DEC-019; evidence in OTHER-ADDONS.md | 4 | forever | With Kill on Sight loaded, a player on its KoS list shows "Wanted by you" | active |
+| REQ-030 | Settings group "Other addons": one switch per adapter (on by default) with a status line. Shift details mark kills that came only from another addon ("via Revenge Book", Q-013). | DEC-019; assumption on display | 3 | forever | Turn an adapter off: its data stops arriving; the status shows reports this session | active |
+| REQ-031 | Wanted: Dead or... Dead adapter. | DEC-019 | none | forever | none | **deferred**: its data travels on a faction-wide channel Revenge won't join (REQ-024) and needs two bundled libraries (REQ-018); revisit only for its guild kill-on-sight list if asked |
+| REQ-022 | Catch-up: when a guildmate or friend running Revenge comes online, the two exchange what the other is missing (kills within the expiry, and Wanted players), compactly and rate-limited. | User: agreed to the catch-up proposal (DEC-017) | 2 | forever | A friend offline during your death logs in later and still sees it within a minute; a long list doesn't flood chat throttling | active |
+| REQ-023 | Wanted entries don't expire. The person who added one can withdraw it, and the withdrawal is shared. Removing someone else's Wanted entry only hides it for you. | User: agreed to the proposal (DEC-018) | 2 | forever | Mira withdraws her Wanted entry: it disappears for you. You remove Mira's: it's gone for you only, still there for Mira | active |
 | REQ-021 | A player added by name is **Wanted**. Their tooltip line and alerts read "💀 Wanted by {name}", where {name} is whoever added them ("you" for your own). They get the nameplate skull too. A player with both kills and a Wanted mark shows the kills line, then the Wanted line. | User: "change the text to 💀 Wanted by {x} where x is the name of the person who added it" (DEC-015) | 2 | forever | Add a name yourself: "Wanted by you". A friend adds one: you see "Wanted by" and the friend's name in the tooltip, the alert and the list | active |
 
 ## Target and API evidence
@@ -43,12 +53,14 @@
 | forever | 1.60.1.70938 / interface 16001 | Gethe/wow-ui-source `forever` at `bebcb6bf309cf41b41bd74f8ca651e6a105b2676`, via the `wow-api-index` query tool (2026-11-25) | all | Declarations prove existence only. Runtime proof comes from Revenge Book v1.6.4 (installed) and The Terminal List, which use the same calls on Forever |
 | forever | as above | Found: `C_DeathRecap.GetRecapEvents`, `PLAYER_DEAD`, `C_ChatInfo.RegisterAddonMessagePrefix` / `SendAddonMessage`, `CHAT_MSG_ADDON`, `C_BattleNet.SendGameData`, `BN_CHAT_MSG_ADDON`, `C_Map.GetBestMapForUnit` / `GetPlayerMapPosition`, `C_NamePlate.GetNamePlateForUnit` | 001, 005, 007, 010 | `UnitGUID` takes `UnitTokenPvPRestrictedForAddOns` and is `SecretWhenUnitIdentityRestricted`: probe in open-world PvP |
 | forever | as above | Not in the generated index (FrameXML): `TooltipDataProcessor`, world-map pin templates | 003, 004, 010 | Confirm in the loaded FrameXML and with Revenge Book's working code |
+| forever | as above | `C_DeathRecap` gives the killer's first name only on Forever (HeadHunter `Detection/ForeverDeaths.lua:3-10`, reviewed 2026-11-25). Full names need a name cache from nameplates, target and mouseover | 001, 024 | Confirm in game with a real PvP death (V-003) |
+| forever | as above | `C_EncodingUtil` (Base64, compression, CBOR, JSON) exists for decoding. The planned adapters don't need it: all use plain text | 024 | none |
 
 ## UI and accepted design
 
 - Mock-up choice and source: **mock-up first** (user, 2026-11-25).
-- Accepted design: none yet. Under review: canvas version 8 (id `1795627657-e22b`, 2026-11-25). It applies the user's six comments on version 6 (version 7), then "Wanted by" for players added by name (DEC-015). Source in [mockup/](mockup/README.md); live at the private artifact https://claude.ai/artifact/9M4d6XpfKVF8XftFNd8Ncs.
-- Defaults shown in version 8, to confirm (Q-007):
+- Accepted design: **canvas version 8** (id `1795627657-e22b`), accepted by the user on 2026-11-25 (DEC-016). It applies the user's six comments on version 6 (version 7), then "Wanted by" for players added by name (DEC-015). Source in [mockup/](mockup/README.md); live at the private artifact https://claude.ai/artifact/9M4d6XpfKVF8XftFNd8Ncs. Design acceptance isn't functional or in-game acceptance.
+- Defaults (accepted with version 8, Q-007):
   - 7 days; details on Shift.
   - Nameplate skull, map pins and both alerts on.
   - Alerts as a popup and in chat; the killer-nearby chat sound on.
@@ -87,17 +99,20 @@
 
 | ID | Question or assumption | Related REQ IDs | Impact / independent work available | Resolution and source |
 |---|---|---|---|---|
-| Q-001 | The name the player sees is "Revenge". The internal name is `RevengeTracker` (folder, saved variables, globals), the slash command `/revenge`, and the message prefix `RVNG1`, avoiding luisjedev's `Revenge` folder and `RevengeDB`. Acceptable? | 015, 016 | Blocks the first code slice only | pending (user) |
+| Q-001 | Internal names | 015, 016 | resolved | Title "Revenge"; folder, saved variables and globals `RevengeTracker`; slash command `/revenge`; message prefix `RVNG1` (DEC-016) |
 | Q-002 | Who counts as "the killer"? | 001, 003 | resolved | Everyone in the kill, with no killing-blow or "helped" distinction (DEC-009) |
 | Q-003 | Should the settings list also allow adding an enemy by name? | 011 | resolved | Yes (DEC-013) |
-| Q-004 | Should Revenge also read Revenge Book's shared messages, so friends using Revenge Book count too? (Default: no; its protocol is undocumented and may change.) | 005, 006 | Later; not in the first release | pending (user) |
+| Q-004 | Should Revenge also read Revenge Book's shared messages? | 005, 006 | resolved, widened | Yes, through a general layer for other popular addons' messages, with deduplication (DEC-019; see [OTHER-ADDONS.md](OTHER-ADDONS.md)) |
 | Q-005 | A shared death whose killer is on your own faction (from a Battle.net friend on the other faction) is dropped. | 006 | Implementation detail | assumption (DEC-008) |
 | Q-006 | Nameplate mark style? | 007 | resolved | Skull, used for every Revenge marker (DEC-012) |
-| Q-007 | Defaults: everything on as shown in version 8 (see "UI and accepted design"), or some alerts, the sound or sharing channels off by default? | 008, 009, 013, 019 | Popup on by default is decided (DEC-014); confirm the rest | pending (user) |
+| Q-007 | Defaults | 008, 009, 013, 019 | resolved | Everything on, as shown in version 8 (DEC-016) |
 | Q-008 | What a player added by name shows before any kills | 003, 007, 011 | resolved | Skull, alerts and "💀 Wanted by {who added them}", shared like deaths (DEC-015, REQ-021) |
 | Q-009 | Which nameplate addon to test the skull with: the user runs none today. Proposal: Threat Plates (`curse:21217`, Forever build, about 40M downloads) or Platynator (`curse:1361299`) in a test profile. | 007 | Only V-009 depends on it | pending (agent, at testing) |
-| Q-010 | Catch-up: friends who are offline miss what's shared while they're away. Proposal: when a guildmate or friend running Revenge comes online, the two exchange what the other is missing (recent kills within the expiry, and Wanted players), compactly and rate-limited. | 005, 006, 021 | Shapes the sharing protocol (IMP-005, IMP-006) | pending (user) |
-| Q-011 | How Wanted entries end. Proposal: they don't expire. The person who added one can withdraw it, which is shared. Removing someone else's only hides it for you. | 011, 012, 021 | Affects the list and protocol | pending (user) |
+| Q-010 | Catch-up for friends who were offline | 005, 006, 021 | resolved | Agreed as proposed (DEC-017, REQ-022) |
+| Q-012 | Accept other addons' reports from players who aren't guildmates or friends (HeadHunter gossip, public channels)? Proposal: never | 006, 024, 028 | Affects the trust filter only | pending (user) |
+| Q-013 | Show "via Revenge Book" in Shift details? Proposal: yes, grey, only when no Revenge user reported the kill | 004, 030 | Display only | pending (user) |
+| Q-014 | Spy (Forever), True Spy, Spy Guild KOS Sync and PlayerNotes & KoS have no public source. Install one through the CurseForge app so the agent can read the installed files, or leave them out? | 024 | Blocks any adapter for them | pending (user) |
+| Q-011 | How Wanted entries end | 011, 012, 021 | resolved | Agreed as proposed (DEC-018, REQ-023) |
 
 ## Decisions and scope changes
 
@@ -118,6 +133,10 @@
 | DEC-013 / 2026-11-25 | User, mock-up comment on the settings list | Include "Add by name" | 011 | Q-003 resolved; Q-008 opened |
 | DEC-014 / 2026-11-25 | User, mock-up comment on alerts | Add an optional popup, on by default: subtle, silent, no screen-wide effects, fades quickly or on a click | 013, 019 | REQ-019 added |
 | DEC-015 / 2026-11-25 | User, in chat | A player added by name reads "💀 Wanted by {who added them}" and syncs to friends and guildmates when the matching sharing is on | 005, 011, 021 | Q-008 resolved; REQ-021 added; Q-010 and Q-011 opened |
+| DEC-016 / 2026-11-25 | User, in chat | Mock-up version 8 accepted, with its defaults and the internal names | UI REQs, 015 | Q-001 and Q-007 resolved; implementation may start after the other-addon plan |
+| DEC-017 / 2026-11-25 | User, in chat | Catch-up for friends who were offline, as proposed | 022 | REQ-022 added |
+| DEC-018 / 2026-11-25 | User, in chat | Wanted entries don't expire; only their adder withdraws them for everyone | 023 | REQ-023 added |
+| DEC-019 / 2026-11-25 | User, in chat | Add a layer that takes in messages from other popular addons (like Revenge Book) and deduplicates as well as possible; plan it before implementation starts | 024+ | See OTHER-ADDONS.md |
 
 ## Completion criteria
 
