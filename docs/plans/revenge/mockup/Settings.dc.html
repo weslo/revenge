@@ -30,30 +30,39 @@ a{color:#8fb8ff}a:hover{color:#b8d2ff}
         <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #e8c25a">Kills</h3>
         <label for="days" style="display: flex; justify-content: space-between; color: #e6e9ed"><span>Show kills for</span><span style="color: #f2c94c">{{daysLabel}}</span></label>
         <input id="days" type="range" min="1" max="30" step="1" value="{{days}}" onChange="{{ setDays }}" style="width: 100%; accent-color: #e8c25a">
-        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{details}}" onChange="{{ toggleDetails }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Details of recent kills in the tooltip</label>
-        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{plates}}" onChange="{{ togglePlates }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Mark recent killers&#39; nameplates</label>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+          <label for="modifier">Tooltip details while holding</label>
+          <select id="modifier" value="{{modifier}}" onChange="{{ setModifier }}" style="min-height: 32px; padding: 0 8px; background: #15191f; border: 1px solid #4b525d; border-radius: 4px; color: #e6e9ed; font: inherit">
+            <option value="Shift">Shift</option>
+            <option value="Ctrl">Ctrl</option>
+            <option value="Alt">Alt</option>
+            <option value="Off">Off (never)</option>
+          </select>
+        </div>
+        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{plates}}" onChange="{{ togglePlates }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Skull beside recent killers&#39; nameplates</label>
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{pins}}" onChange="{{ togglePins }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Show kills on the world map</label>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 10px">
-        <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #e8c25a">Alerts</h3>
-        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{nearAlert}}" onChange="{{ toggleNear }}" style="width: 18px; height: 18px; accent-color: #e8c25a">When a recent killer comes into view</label>
-        <label style="display: flex; align-items: center; gap: 10px; padding-left: 28px; color: #c9ced6"><input type="checkbox" checked="{{nearSound}}" onChange="{{ toggleSound }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Play a sound too</label>
-        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{friendAlert}}" onChange="{{ toggleFriend }}" style="width: 18px; height: 18px; accent-color: #e8c25a">When an enemy kills a friend or guildmate</label>
         <h3 style="margin: 8px 0 0; font-size: 17px; font-weight: 700; color: #e8c25a">Sharing</h3>
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{shareGuild}}" onChange="{{ toggleGuild }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Share my deaths with my guild</label>
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{shareFriends}}" onChange="{{ toggleFriends }}" style="width: 18px; height: 18px; accent-color: #e8c25a">…with in-game friends</label>
         <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{shareBnet}}" onChange="{{ toggleBnet }}" style="width: 18px; height: 18px; accent-color: #e8c25a">…with Battle.net friends</label>
       </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #e8c25a">Alerts</h3>
+        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{nearAlert}}" onChange="{{ toggleNear }}" style="width: 18px; height: 18px; accent-color: #e8c25a">When a recent killer comes into view</label>
+        <label style="display: flex; align-items: center; gap: 10px"><input type="checkbox" checked="{{friendAlert}}" onChange="{{ toggleFriend }}" style="width: 18px; height: 18px; accent-color: #e8c25a">When an enemy kills a friend or guildmate</label>
+        <div style="color: #c9ced6; margin-top: 4px">Show alerts</div>
+        <label style="display: flex; align-items: center; gap: 10px; padding-left: 28px"><input type="checkbox" checked="{{popup}}" onChange="{{ togglePopup }}" style="width: 18px; height: 18px; accent-color: #e8c25a">As a small popup (silent, fades quickly)</label>
+        <label style="display: flex; align-items: center; gap: 10px; padding-left: 28px"><input type="checkbox" checked="{{chat}}" onChange="{{ toggleChat }}" style="width: 18px; height: 18px; accent-color: #e8c25a">In chat</label>
+        <label style="display: flex; align-items: center; gap: 10px; padding-left: 28px; color: #c9ced6"><input type="checkbox" checked="{{nearSound}}" onChange="{{ toggleSound }}" style="width: 18px; height: 18px; accent-color: #e8c25a">Sound when a killer comes into view</label>
+      </div>
     </div>
     <div style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 0">
       <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #e8c25a">Recent killers ({{count}})</h3>
-      <sc-if value="{{addByName}}" hint-placeholder-val="{{ false }}">
-        <div style="display: flex; gap: 10px; align-items: center">
-          <label for="addname" style="color: #c9ced6">Add by name</label>
-          <input id="addname" type="text" placeholder="First Last" value="{{draft}}" onChange="{{ setDraft }}" style="flex-grow: 1; min-height: 36px; box-sizing: border-box; padding: 0 10px; background: #15191f; border: 1px solid #4b525d; border-radius: 4px; color: #e6e9ed; font: inherit">
-          <button type="button" onClick="{{ addRow }}" style="min-height: 36px; padding: 0 16px; background: #2a2f37; border: 1px solid #4b525d; border-radius: 4px; color: #e6e9ed; font: inherit; font-size: 15px; cursor: pointer">Add</button>
-        </div>
-      </sc-if>
+      <div style="display: flex; gap: 10px; align-items: center">
+        <label for="addname" style="color: #c9ced6">Add by name</label>
+        <input id="addname" type="text" placeholder="First Last" value="{{draft}}" onChange="{{ setDraft }}" style="flex-grow: 1; min-height: 36px; box-sizing: border-box; padding: 0 10px; background: #15191f; border: 1px solid #4b525d; border-radius: 4px; color: #e6e9ed; font: inherit">
+        <button type="button" onClick="{{ addRow }}" style="min-height: 36px; padding: 0 16px; background: #2a2f37; border: 1px solid #4b525d; border-radius: 4px; color: #e6e9ed; font: inherit; font-size: 15px; cursor: pointer">Add</button>
+      </div>
       <div style="display: flex; flex-direction: column; border: 1px solid #2c3139; border-radius: 4px">
         <sc-for list="{{rows}}" as="row" hint-placeholder-count="4">
           <div style="display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr) 90px 96px; gap: 12px; align-items: center; padding: 6px 12px; border-bottom: 1px solid #1f242b">
@@ -69,10 +78,10 @@ a{color:#8fb8ff}a:hover{color:#b8d2ff}
       </div>
     </div>
   </div>
-  <div style="font-size: 13px; line-height: 1.45; color: #a3acb6">Defaults shown: 7 days; every display, alert and sharing option on. Use Tweaks to show the optional &#8220;Add by name&#8221; field.</div>
+  <div style="font-size: 13px; line-height: 1.45; color: #a3acb6">Defaults shown: 7 days; details on Shift; everything else on. A player added by name gets the skull and alerts without any kills yet.</div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"addByName":{"editor":"boolean","default":false},"$preview":{"width":960,"height":940}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":940}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);
@@ -80,13 +89,14 @@ class Component extends DCLogic {
   }
   defaults() {
     return {
-      days: 7, details: true, plates: true, pins: true, nearAlert: true, nearSound: true, friendAlert: true,
+      days: 7, modifier: 'Shift', plates: true, pins: true, nearAlert: true, friendAlert: true,
+      popup: true, chat: true, nearSound: true,
       shareGuild: true, shareFriends: true, shareBnet: true, draft: '',
       rows: [
-        { id: 1, name: 'Gorvak Ashmane', who: 'Level 41 Orc Rogue', what: 'Killed you 2×, Mira and Tavish', when: '2h ago' },
-        { id: 2, name: 'Shazra Vex', who: 'Level 39 Troll Hunter', what: 'Helped kill you', when: '2h ago' },
-        { id: 3, name: 'Ruskar Redtusk', who: 'Level 44 Orc Warrior', what: 'Killed Tavish (guild)', when: '3d ago' },
-        { id: 4, name: 'Velka Duskmantle', who: 'Level 40 Undead Mage', what: 'Killed Mira (friend) 2×', when: '6d ago' }
+        { id: 1, name: 'Gorvak Ashmane', who: 'Level 41 Orc Rogue', what: '(5) You, Mira, Tavish, +1 more', when: '2h ago' },
+        { id: 2, name: 'Shazra Vex', who: 'Level 39 Troll Hunter', what: '(1) You', when: '2h ago' },
+        { id: 3, name: 'Ruskar Redtusk', who: 'Level 44 Orc Warrior', what: '(1) Tavish', when: '3d ago' },
+        { id: 4, name: 'Velka Duskmantle', who: 'Level 40 Undead Mage', what: '(2) Mira', when: '6d ago' }
       ]
     };
   }
@@ -97,19 +107,21 @@ class Component extends DCLogic {
       days: s.days,
       daysLabel: s.days + (s.days === 1 ? ' day' : ' days'),
       setDays: (e) => this.setState({ days: Number(e.target.value) }),
-      details: s.details, plates: s.plates, pins: s.pins, nearAlert: s.nearAlert, nearSound: s.nearSound,
-      friendAlert: s.friendAlert, shareGuild: s.shareGuild, shareFriends: s.shareFriends, shareBnet: s.shareBnet,
-      toggleDetails: flip('details'), togglePlates: flip('plates'), togglePins: flip('pins'),
-      toggleNear: flip('nearAlert'), toggleSound: flip('nearSound'), toggleFriend: flip('friendAlert'),
+      modifier: s.modifier,
+      setModifier: (e) => this.setState({ modifier: e.target.value }),
+      plates: s.plates, pins: s.pins, nearAlert: s.nearAlert, friendAlert: s.friendAlert,
+      popup: s.popup, chat: s.chat, nearSound: s.nearSound,
+      shareGuild: s.shareGuild, shareFriends: s.shareFriends, shareBnet: s.shareBnet,
+      togglePlates: flip('plates'), togglePins: flip('pins'), toggleNear: flip('nearAlert'), toggleFriend: flip('friendAlert'),
+      togglePopup: flip('popup'), toggleChat: flip('chat'), toggleSound: flip('nearSound'),
       toggleGuild: flip('shareGuild'), toggleFriends: flip('shareFriends'), toggleBnet: flip('shareBnet'),
-      addByName: this.props.addByName ?? false,
       draft: s.draft,
       setDraft: (e) => this.setState({ draft: e.target.value }),
       addRow: () => {
         const name = (this.state.draft || '').trim();
         if (!name) return;
         const id = Date.now();
-        this.setState({ draft: '', rows: [{ id, name, who: 'Added by hand', what: 'No kills recorded yet', when: 'now' }].concat(this.state.rows) });
+        this.setState({ draft: '', rows: [{ id, name, who: 'Added by hand', what: 'No kills yet', when: 'now' }].concat(this.state.rows) });
       },
       resetAll: () => this.setState(this.defaults()),
       count: s.rows.length,

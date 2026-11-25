@@ -11,14 +11,15 @@
 |---|---|---|---|---|---|---|---|---|
 | IMP-001 | 013, 014, 015, 016, 018 | forever | S01: the addon loads; saved data with defaults; English locale table; empty "Revenge" settings category; `/revenge` opens it | Q-001 answered; mock-up accepted | Claude | `RevengeTracker.toc`, `Core.lua`, `Locales/enUS.lua`, `Settings.lua` | planned | V-001, V-002 |
 | IMP-002 | 001, 002, 017 | forever | S02: an open-world death records the enemy players from the death recap; instance and duel deaths are ignored; a debug-only command injects sample deaths | IMP-001 | Claude | `Deaths.lua`, `Store.lua` | planned | V-001, V-003 |
-| IMP-003 | 003, 004, 012 | forever | S03: hovering a recorded enemy shows the summary and up to 3 detail lines, respecting expiry | IMP-002 | Claude | `Tooltip.lua` | planned | V-001, V-004 |
-| IMP-004 | 011, 012, 013 | forever | S04: settings show the expiry slider and the list of recent killers with a remove button | IMP-002 | Claude | `Settings.lua`, `List.lua` | planned | V-001, V-005 |
+| IMP-003 | 003, 004, 012 | forever | S03: hovering a recorded enemy shows the one skull line; holding the modifier (Shift) adds the detail lines; expiry respected | IMP-002 | Claude | `Tooltip.lua` | planned | V-001, V-004 |
+| IMP-004 | 011, 012, 013 | forever | S04: settings show the expiry slider, the modifier choice, and the list of recent killers with remove and add-by-name | IMP-002 | Claude | `Settings.lua`, `List.lua` | planned | V-001, V-005 |
 | IMP-005 | 005, 006 | forever | S05: guild sharing; send own deaths, receive guildmates', deduplicate, rate-limit | IMP-002 | Claude | `Share.lua`, `Protocol.lua` | planned | V-001, V-006 |
 | IMP-006 | 005, 006 | forever | S06: in-game friends (whisper) and Battle.net friends (game data), with a hello so only friends running Revenge are messaged | IMP-005 | Claude | `Share.lua` | planned | V-001, V-007 |
 | IMP-007 | 009 | forever | S07: optional chat alert when a shared death arrives | IMP-005 | Claude | `Alerts.lua` | planned | V-001, V-008 |
-| IMP-008 | 007 | forever | S08: subtle nameplate mark on recent killers | IMP-002 | Claude | `Nameplates.lua` | planned | V-001, V-009 |
+| IMP-008 | 007 | forever | S08: skull beside recent killers' nameplates, anchored to whichever nameplate is showing (game default or an addon's), never restyling it | IMP-002 | Claude | `Nameplates.lua` | planned | V-001, V-009 |
 | IMP-009 | 008 | forever | S09: optional alert when a recent killer comes into view, with a per-player cooldown | IMP-008 | Claude | `Alerts.lua` | planned | V-001, V-010 |
-| IMP-010 | 010 | forever | S10: world map pins at recent death locations, with hover details | IMP-002 | Claude | `MapPins.lua` | planned | V-001, V-011 |
+| IMP-010 | 010, 020 | forever | S10: skull pins on the world map at recent death locations, coloured by group, with hover details and right-click "Dismiss kill" | IMP-002 | Claude | `MapPins.lua` | planned | V-001, V-011 |
+| IMP-012 | 019 | forever | S12: the silent alert popup for both alerts: fades after about 4 seconds or on a click | IMP-007, IMP-009 | Claude | `Popup.lua` | planned | V-001, V-013 |
 | IMP-011 | 016 | forever | S11: GitHub Actions release with the BigWigs packager (zip plus `release.json`); install through instawow | IMP-001 | Claude | `.github/workflows/release.yml`, `.pkgmeta` | planned | V-012 |
 
 Statuses: `planned`, `in progress`, `implemented`, `verified`, `blocked`, `deferred`, `superseded`.
@@ -30,15 +31,16 @@ Statuses: `planned`, `in progress`, `implemented`, `verified`, `blocked`, `defer
 | V-001 | all / every slice | forever; n/a | static | per slice | `luacheck` with a `.luacheckrc` for WoW globals: 0 warnings. A Lua 5.1 syntax scan for `//`, `goto`, `::label::`, `bit32`, `table.pack` and `utf8` (luacheck 1.2.0 parses newer Lua, so it doesn't catch these). Check the TOC file list | | not run |
 | V-002 | 013, 014, 015 / S01 | forever 1.60.1 | in-game | | Load with Revenge Book and luisjedev's Revenge enabled; open Options > AddOns > Revenge; `/reload`; no Bugsy errors | | not run |
 | V-003 | 001, 002, 017 / S02 | forever 1.60.1 | in-game | | Open-world PvP death: entry recorded. Dungeon or battleground death and a duel: nothing recorded. Bugsy clean | | not run |
-| V-004 | 003, 004, 012 / S03 | forever 1.60.1 | in-game | | With sample data, hover the killer: summary and details lines; expire one: line gone | | not run |
-| V-005 | 011, 012, 013 / S04 | forever 1.60.1 | in-game | | Remove an entry in settings: gone from tooltip, marks and pins; settings persist across `/reload` | | not run |
+| V-004 | 003, 004, 012 / S03 | forever 1.60.1 | in-game | | With sample data, hover the killer: one skull line with the right count and names; hold Shift: detail lines; set the modifier to Off: none; expire a kill: the count drops | | not run |
+| V-005 | 011, 012, 013 / S04 | forever 1.60.1 | in-game | | Remove an entry in settings: gone from tooltip, skull and pins; add a name: listed; settings persist across `/reload` | | not run |
 | V-006 | 005, 006 / S05 | forever 1.60.1 | in-game, 2 clients | | Guildmate dies: entry arrives once; a repeat send is ignored | | not run |
 | V-007 | 005, 006 / S06 | forever 1.60.1 | in-game, 2 clients | | Same with an in-game friend and a Battle.net friend | | not run |
 | V-008 | 009 / S07 | forever 1.60.1 | in-game | | Shared death with alert on: one chat line; off: none | | not run |
-| V-009 | 007 / S08 | forever 1.60.1 | in-game | | Recorded killer's nameplate shows the mark; it updates on removal and expiry | | not run |
+| V-009 | 007 / S08 | forever 1.60.1 | in-game | | Recorded killer's nameplate shows the skull with the default plates and with one nameplate addon (Q-009), the plate otherwise unchanged; it updates on removal, dismissal and expiry | | not run |
 | V-010 | 008 / S09 | forever 1.60.1 | in-game | | Recorded killer comes into view: one alert; no repeat within the cooldown | | not run |
-| V-011 | 010 / S10 | forever 1.60.1 | in-game | | World map shows pins at sample death positions, with hover details | | not run |
-| V-012 | 016 / S11 | forever 1.60.1 | install | | Tag a release; `instawow install github:<owner>/revenge` installs it; AddOns list shows it compatible | | not run |
+| V-011 | 010, 020 / S10 | forever 1.60.1 | in-game | | World map shows skull pins at sample death positions in the right colours, with hover details; right-click, Dismiss kill: that kill is gone everywhere | | not run |
+| V-012 | 016 / S11 | forever 1.60.1 | install | | Tag a release; `instawow install github:weslo/revenge` installs it; AddOns list shows it compatible | | not run |
+| V-013 | 019 / S12 | forever 1.60.1 | in-game | | Trigger each alert: one small silent popup, no screen effect; it fades by itself after about 4 seconds and at once on a click; off in settings: none | | not run |
 
 Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), `stale`.
 
@@ -46,7 +48,7 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 
 | REQ / row IDs | State | Cause or scope decision / source | Next action and owner | Effect on delivery |
 |---|---|---|---|---|
-| all IMP rows | waiting | Mock-up first (DEC-006); internal name pending (Q-001) | Mock-up built (canvas version 6); the user reviews it and answers Q-001, Q-002, Q-003, Q-006 and Q-007 | No code until then |
+| all IMP rows | waiting | Mock-up first (DEC-006); internal name pending (Q-001) | Canvas version 7 applies the user's six comments; the user accepts it and answers Q-001, Q-007 and Q-008 | No code until then |
 
 ## Resume checkpoint
 
@@ -56,10 +58,10 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 - Working tree: clean after the mock-up commit
 - Last completed slice: none (planning)
 - Last verified state: none
-- Current slice and pending edits: the UI mock-up (canvas version 6) is awaiting the user's review
-- Next executable action: get the user's answers on the mock-up (Q-001, Q-002, Q-003, Q-006, Q-007); record the accepted design revision in REQUIREMENTS.md; merge `plan/ui-mockup`; then start IMP-001
-- Open questions / blockers: Q-001 (blocks IMP-001), Q-002, Q-003, Q-006, Q-007 (settle in the mock-up), Q-004 (later)
-- Decisions to retain: DEC-001 to DEC-008
+- Current slice and pending edits: the UI mock-up, canvas version 7 (the user's six comments on version 6 applied), is awaiting acceptance
+- Next executable action: get the user's acceptance of version 7 and answers to Q-001, Q-007 and Q-008; record the accepted design revision in REQUIREMENTS.md; merge `plan/ui-mockup`; then start IMP-001
+- Open questions / blockers: Q-001 (blocks IMP-001), Q-007, Q-008 (settle at acceptance), Q-004 (later), Q-009 (at testing). Resolved: Q-002, Q-003, Q-006
+- Decisions to retain: DEC-001 to DEC-014
 - Testing choice: pending; Bugsy installed for error capture
 - Controller assessment: settings list and map pins pending checks; everything else passive
 - Options/localization: REQ-013 and REQ-014; English only
