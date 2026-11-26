@@ -4,6 +4,17 @@ local L = ns.L
 
 ns.VERSION = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version") or "dev"
 
+-- Revenge's own skull (drawn from the accepted mock-up by tools/make_skull.py): white,
+-- tinted per use, so it can't be mistaken for the raid-target skull.
+ns.SKULL_TEXTURE = "Interface\\AddOns\\" .. addonName .. "\\Media\\Skull"
+
+-- Colours by whose death it was (the mock-up's map pins): you, a friend, a guildmate.
+ns.Colors = {
+    you = { 1, 0.549, 0.431 },      -- #ff8c6e
+    friend = { 0.239, 0.482, 0.851 },  -- #3d7bd9
+    guild = { 0.910, 0.843, 0.478 },   -- #e8d77a
+}
+
 ---------------------------------------------------------------------------
 -- Restricted ("secret") values. Forever can hide some unit values from addons.
 -- These return nil instead of a value we may not touch, so callers never

@@ -8,4 +8,14 @@
     <Frame name="RevengeTrackerListRowTemplate" virtual="true">
         <Size x="560" y="38"/>
     </Frame>
+    <!-- A kill on the world map (MapPins.lua). The mixin is defined when the map is ready;
+         no OnEnter/OnLeave here: the map wires them to OnMouseEnter/OnMouseLeave. -->
+    <Frame name="RevengeTrackerKillPinTemplate" mixin="RevengeTrackerKillPinMixin" enableMouse="true" hidden="true" virtual="true">
+        <Size x="20" y="20"/>
+        <Layers>
+            <Layer level="ARTWORK">
+                <Texture parentKey="Icon" file="Interface\AddOns\RevengeTracker\Media\Skull" setAllPoints="true"/>
+            </Layer>
+        </Layers>
+    </Frame>
 </Ui>

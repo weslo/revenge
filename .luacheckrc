@@ -10,6 +10,7 @@ exclude_files = { ".luacheckrc", "tools/**", "docs/**", "tests/**", ".venv/**", 
 globals = {
     "RevengeTrackerDB",
     "RevengeTracker",
+    "RevengeTrackerKillPinMixin",
     "SLASH_REVENGETRACKER1",
     "SlashCmdList",
 }
@@ -26,5 +27,7 @@ read_globals = {
     "UnitFullName", "GetUnitName", "RegionalUniqueNamesEnabled", "UnitIsPlayer", "UnitGUID",
     "UnitClass", "UnitLevel", "UnitFactionGroup", "GetGuildInfo", "GetPlayerInfoByGUID", "IsGuildMember",
     "IsShiftKeyDown", "IsControlKeyDown", "IsAltKeyDown",
-    "GetTime", "IsInGuild", "Ambiguate",
+    "GetTime", "IsInGuild", "Ambiguate", "UIParent", "PlaySound", "SOUNDKIT",
+    "C_NamePlate", "C_BattleNet", "BNGetNumFriends", "BNSendGameData", "BNET_CLIENT_WOW", "WOW_PROJECT_ID",
+    "WorldMapFrame", "CreateFromMixins", "Mixin", "MapCanvasDataProviderMixin", "MapCanvasPinMixin", "MenuUtil",
 }

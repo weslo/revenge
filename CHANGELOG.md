@@ -1,5 +1,18 @@
 # Revenge changelog
 
+## v0.3.0
+
+- Sharing with in-game friends and Battle.net friends who run Revenge, each with its own switch
+  under Sharing. Battle.net friends count only on WoW: Forever and your own faction.
+- A small skull beside the nameplate of a recent killer or a Wanted player. The nameplate itself
+  is left alone, whether it's the game's or an addon's.
+- Skulls on the world map where recent deaths happened: coral for you, blue for friends, yellow
+  for guildmates. Hover for who and when; right-click to dismiss a kill everywhere.
+- Alerts, both on by default: when a recent killer or a Wanted player comes into view (at most
+  once every 5 minutes per player), and when a friend or guildmate is killed. They show as a
+  small silent popup that fades by itself, and in chat with a short sound; each can be
+  switched off.
+
 ## v0.2.0
 
 - Guild sharing: your deaths and the players you mark Wanted reach guildmates who run Revenge,

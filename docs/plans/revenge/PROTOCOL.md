@@ -1,7 +1,7 @@
 # Revenge's sharing protocol (prefix `RVNG1`)
 
-Written for S05 (#4), guild sharing and catch-up. Friends and Battle.net (#5) reuse the same
-messages on other channels.
+Written for S05 (#4), guild sharing and catch-up, and extended for S06 (#5), in-game friends and
+Battle.net friends, which use the same messages on other channels.
 
 ## Rules
 
@@ -9,9 +9,14 @@ messages on other channels.
   the withdrawals of those marks. A message whose subject isn't its sender is dropped, so
   nothing travels second-hand. This is the trust rule of the plan (DEC-008, OTHER-ADDONS.md);
   Revenge Book's sync follows the same rule.
-- **Guild channel only, for now.** The game delivers GUILD addon messages only from current
-  guildmates, and a guild is one faction, so a guildmate's killers are hostile to you too.
-  Whispers are ignored until #5 adds friends, with their own checks.
+- **Three channels, each with its own switch:**
+  - the guild channel: the game delivers it only from current guildmates, and a guild is one
+    faction, so a guildmate's killers are hostile to you too;
+  - whispers to in-game friends, by the name the friend list gives. A whisper counts only from
+    a current friend;
+  - Battle.net game data to Battle.net friends playing WoW: Forever on your own faction. Data
+    counts only from such an account.
+  A guildmate who's also a friend is reached through the guild only.
 - **The sender must match the name in the message.** The game names a sender as "Name",
   "Name-Realm", "Name-Surname" or "Name Surname" (seen by Revenge Book on Forever). The first
   name must match; a surname, when the game gives one, must match too.
@@ -22,8 +27,8 @@ messages on other channels.
   all; at most 50 Wanted marks stored per adder; kill times no more than 30 days old or 5
   minutes in the future. Anything malformed is dropped without a word (with `/revenge debug`,
   a debug line says why).
-- **"Share my deaths and wanted players with my guild" off:** nothing of yours is sent, and
-  hellos aren't answered. You still say hello and receive.
+- **A channel's switch off:** nothing of yours goes there, and hellos from there aren't
+  answered. You still say hello and receive.
 
 ## Messages
 
@@ -66,6 +71,17 @@ full name and GUID (without `Player-`; empty if unknown).
 
 Data only meets when both people are online at once: a guildmate's death reaches you when you
 and they are next online together.
+
+## Friends
+
+1. Revenge reads your friend list and Battle.net friends at login and whenever they change.
+2. Each friend who's online gets a hello, 20 to 30 seconds after your login, or 25 to 40 seconds
+   after they come online, so their addons have loaded. At most 30 hellos go out in 10 minutes;
+   one held back tries again a minute later.
+3. A friend who answers, or sends anything valid, is a *peer*: they run Revenge, and get your
+   deaths, marks and withdrawals as they happen. A friend's hello gets a hello back, so both
+   sides answer. A friend going offline stops being a peer until they're back.
+4. Answers to a friend's hello go to that friend only.
 
 ## Sending
 

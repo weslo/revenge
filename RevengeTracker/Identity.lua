@@ -167,13 +167,28 @@ function Identity.ShortName(identity)
     return name:match("^(%S+)") or name
 end
 
+-- Whose this is: "you", "guild", "friend" (in-game or Battle.net), or nil.
+function Identity.Group(identity)
+    if not identity then return nil end
+    if Identity.IsSelf(identity) then return "you" end
+    local guid = identity.guid
+    if not guid then return nil end
+    if Try(IsGuildMember, guid) then return "guild" end
+    if C_FriendList and Try(C_FriendList.IsFriend, guid) then return "friend" end
+    if C_BattleNet and C_BattleNet.GetGameAccountInfoByGUID
+        and type(ns.Accessible(Try(C_BattleNet.GetGameAccountInfoByGUID, guid))) == "table" then
+        return "friend"
+    end
+    return nil
+end
+
 -- Full display name with "(friend)" or "(guild)", or "You".
 function Identity.LongName(identity)
-    if Identity.IsSelf(identity) then return ns.L.YOU end
+    local group = Identity.Group(identity)
+    if group == "you" then return ns.L.YOU end
     local name = identity.name or "?"
-    local guid = identity.guid
-    if guid and Try(IsGuildMember, guid) then return ns.L.AS_GUILD:format(name) end
-    if guid and C_FriendList and Try(C_FriendList.IsFriend, guid) then return ns.L.AS_FRIEND:format(name) end
+    if group == "guild" then return ns.L.AS_GUILD:format(name) end
+    if group == "friend" then return ns.L.AS_FRIEND:format(name) end
     return name
 end
 

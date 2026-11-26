@@ -1,11 +1,13 @@
--- Share: your own deaths and Wanted marks go to guildmates running Revenge, and
--- theirs come in through the same merge as your own. Protocol.lua encodes the
--- messages; docs/plans/revenge/PROTOCOL.md has the rules. In short:
+-- Share: your own deaths and Wanted marks go to guildmates and friends running Revenge,
+-- and theirs come in through the same merge as your own. Protocol.lua encodes the
+-- messages, Friends.lua knows which friends to reach and how, and
+-- docs/plans/revenge/PROTOCOL.md has the rules. In short:
 --   - everyone sends only their own data, so nothing travels second-hand;
---   - the guild channel only, for now (friends and Battle.net come later);
---   - after login you say hello, and guildmates answer with what you missed;
---   - with "Share my deaths and wanted players with my guild" off, nothing of yours
---     is sent and hellos aren't answered. You still receive.
+--   - the guild channel; whispers to in-game friends; Battle.net game data to
+--     Battle.net friends on WoW: Forever and your faction. Each has its own switch;
+--   - after login you say hello, and they answer with what you missed;
+--   - with a channel's sharing off, nothing of yours goes there and hellos from there
+--     aren't answered. You still receive.
 -- Anything malformed, or not the sender's own, is dropped without a word.
 local _, ns = ...
 
@@ -14,15 +16,15 @@ local Protocol, Identity, Store = ns.Protocol, ns.Identity, ns.Store
 local Try = ns.Try
 
 local PREFIX = Protocol.PREFIX
-local CHANNEL = "GUILD"
+local GUILD = { key = "GUILD", channel = "GUILD" }
 
 -- Catch-up
 local HELLO_DELAY, HELLO_JITTER = 10, 5
 local LOOKBACK = 86400              -- a hello asks for at least the last day
 local SINCE_OVERLAP = 600
 local ANSWER_DELAY_MIN, ANSWER_DELAY_MAX = 2, 8
-local ANSWER_GAP = 10               -- seconds between two answers
-local HELLO_REPEAT = 300            -- a guildmate's hello is answered at most this often
+local ANSWER_GAP = 10               -- seconds between two answers on one route
+local HELLO_REPEAT = 300            -- a sender's hello is answered at most this often
 local ANSWER_KILLS, ANSWER_MARKS, ANSWER_WITHDRAWALS = 20, 20, 10
 local WITHDRAWAL_AGE = 30 * 86400
 
@@ -43,9 +45,16 @@ local function Me()
     if me and me.name then return me end
 end
 
-local function CanShare()
-    return ns.db ~= nil and Store.Setting("shareGuild") == true and Try(IsInGuild) and Me() ~= nil
+local SETTING = { GUILD = "shareGuild", WHISPER = "shareFriends", BN = "shareBattleNet" }
+
+-- Whether your own data may go out on this route.
+local function MayShare(route)
+    if not (ns.db and Me() and Store.Setting(SETTING[route.channel]) == true) then return false end
+    if route.channel == "GUILD" then return Try(IsInGuild) and true or false end
+    return true
 end
+
+local function Friends() return ns.Friends end
 
 ---------------------------------------------------------------------------
 -- The send queue: up to BURST at once, then PER_SECOND; waits out combat,
@@ -62,14 +71,27 @@ local function Held()
     return false
 end
 
--- "ok", "throttle", "retry" or "drop", from pcall(SendAddonMessage, ...).
+-- "ok", "throttle", "retry" or "drop", from pcall(send, ...).
 local function Outcome(ok, result)
     if not ok then return "retry" end
     if result == nil or result == true or result == (RESULT.Success or 0) then return "ok" end
     if result == false then return "retry" end
     if result == (RESULT.AddonMessageThrottle or 3) or result == (RESULT.ChannelThrottle or 8) then return "throttle" end
     if result == (RESULT.AddOnMessageLockdown or 11) or result == (RESULT.GeneralError or 9) then return "retry" end
-    return "drop"  -- not in a guild, an invalid channel or message: waiting won't help
+    return "drop"  -- not in a guild, the friend went offline, an invalid message: waiting won't help
+end
+
+local function BattleNetSend()
+    return BNSendGameData or (C_BattleNet and C_BattleNet.SendGameData)
+end
+
+local function SendNow(item)
+    if item.channel == "BN" then
+        local send = BattleNetSend()
+        if not send then return "drop" end
+        return Outcome(pcall(send, item.target, PREFIX, item.text))
+    end
+    return Outcome(pcall(C_ChatInfo.SendAddonMessage, PREFIX, item.text, item.channel, item.target))
 end
 
 local Pump
@@ -94,7 +116,7 @@ Pump = function()
         elseif tokens < 1 then
             return Schedule((1 - tokens) / PER_SECOND)
         else
-            local outcome = Outcome(pcall(C_ChatInfo.SendAddonMessage, PREFIX, item.text, item.channel, item.target))
+            local outcome = SendNow(item)
             if outcome == "ok" then
                 table.remove(queue, 1)
                 tokens = tokens - 1
@@ -114,9 +136,14 @@ Pump = function()
     end
 end
 
-local function Enqueue(text)
-    if not (text and C_ChatInfo and C_ChatInfo.SendAddonMessage) or #queue >= QUEUE_MAX then return false end
-    queue[#queue + 1] = { text = text, channel = CHANNEL, queued = ns.Now(), tries = 0 }
+local function Enqueue(text, route)
+    if not (text and route) or #queue >= QUEUE_MAX then return false end
+    if route.channel == "BN" then
+        if not BattleNetSend() then return false end
+    elseif not (C_ChatInfo and C_ChatInfo.SendAddonMessage) then
+        return false
+    end
+    queue[#queue + 1] = { text = text, channel = route.channel, target = route.target, queued = ns.Now(), tries = 0 }
     Schedule(0)
     return true
 end
@@ -125,37 +152,57 @@ function Share.QueueLength()
     return #queue
 end
 
+-- Where your own data goes: the guild, and each friend running Revenge who isn't
+-- reached through the guild already.
+local function Routes()
+    local routes = {}
+    local toGuild = MayShare(GUILD)
+    if toGuild then routes[#routes + 1] = GUILD end
+    local friends = Friends()
+    for _, route in ipairs(friends and friends.Peers() or {}) do
+        if MayShare(route) and not (toGuild and route.guildmate) then routes[#routes + 1] = route end
+    end
+    return routes
+end
+
+-- Sends texts to every route. Returns how many messages were queued.
+local function Broadcast(texts)
+    local queued = 0
+    for _, route in ipairs(Routes()) do
+        for _, text in ipairs(texts) do
+            if Enqueue(text, route) then queued = queued + 1 end
+        end
+    end
+    return queued
+end
+
 ---------------------------------------------------------------------------
 -- Your own data, as it happens
 ---------------------------------------------------------------------------
 -- A death of yours (Deaths.lua). Returns how many messages were queued.
 function Share.OwnKill(kill)
-    if not (kill and CanShare() and Identity.IsSelf(kill.victim)) then return 0 end
-    local queued = 0
-    for _, text in ipairs(Protocol.Kill("K", Me(), kill)) do
-        if Enqueue(text) then queued = queued + 1 end
-    end
-    return queued
+    if not (kill and Me() and Identity.IsSelf(kill.victim)) then return 0 end
+    return Broadcast(Protocol.Kill("K", Me(), kill))
 end
 
 -- A player you marked Wanted (List.lua).
 function Share.OwnWanted(mark)
-    if not (mark and CanShare() and Identity.IsSelf(mark.by)) then return false end
-    return Enqueue(Protocol.Wanted(Me(), mark))
+    if not (mark and Me() and Identity.IsSelf(mark.by)) then return 0 end
+    return Broadcast({ Protocol.Wanted(Me(), mark) })
 end
 
 -- You withdrew your mark on target at `at` (List.lua).
 function Share.OwnWithdrawal(target, at)
-    if not (target and CanShare()) then return false end
-    return Enqueue(Protocol.Withdrawal(Me(), target.name or target.key, at))
+    if not (target and Me()) then return 0 end
+    return Broadcast({ Protocol.Withdrawal(Me(), target.name or target.key, at) })
 end
 
 ---------------------------------------------------------------------------
--- Catch-up: hello after login, answers to guildmates' hellos
+-- Catch-up: hellos, and answers to them
 ---------------------------------------------------------------------------
-local helloSent, helloScheduled = false, false
-local pendingSince, answerScheduled, lastAnswerAt = nil, false, nil
-local helloAnswered = {}
+local guildHelloSent, guildHelloScheduled = false, false
+local answers = {}           -- route key -> { route, since, scheduled, lastAt }
+local helloAnswered = {}     -- sender key -> time we last answered their hello
 
 -- What a hello asks for: since you were last online (less an overlap), at least a
 -- day back, and no further back than your expiry.
@@ -167,17 +214,26 @@ function Share.HelloSince(now)
     return math.floor(since)
 end
 
-local function SendHello()
-    helloScheduled = false
-    if helloSent or not Try(IsInGuild) or not Me() then return end
-    local text = Protocol.Hello(Me(), Share.HelloSince(), ns.VERSION)
-    if text and Enqueue(text) then helloSent = true end
+local function HelloText()
+    local me = Me()
+    return me and Protocol.Hello(me, Share.HelloSince(), ns.VERSION)
 end
 
-local function ScheduleHello()
-    if helloSent or helloScheduled then return end
-    helloScheduled = true
-    ns.After(HELLO_DELAY + math.random() * HELLO_JITTER, SendHello)
+local function SendGuildHello()
+    guildHelloScheduled = false
+    if guildHelloSent or not Try(IsInGuild) then return end
+    if Enqueue(HelloText(), GUILD) then guildHelloSent = true end
+end
+
+local function ScheduleGuildHello()
+    if guildHelloSent or guildHelloScheduled then return end
+    guildHelloScheduled = true
+    ns.After(HELLO_DELAY + math.random() * HELLO_JITTER, SendGuildHello)
+end
+
+-- Says hello to one friend (Friends.lua). Returns true if it was queued.
+function Share.HelloTo(route)
+    return Enqueue(HelloText(), route)
 end
 
 local function Newest(a, b) return a.at > b.at end
@@ -188,63 +244,71 @@ local function Take(list, limit)
     return list
 end
 
-local function OwnKillsSince(since, now)
+-- Your answer to a hello asking for what's newer than `since`, as texts.
+local function AnswerTexts(since, me, now)
+    local texts = {}
     local kills = {}
     for _, kill in pairs(Store.AllKills()) do
         if not kill.test and kill.at >= since and now - kill.at <= MAX_AGE and Identity.IsSelf(kill.victim) then
             kills[#kills + 1] = kill
         end
     end
-    return Take(kills, ANSWER_KILLS)
-end
-
-local function OwnMarks()
+    for _, kill in ipairs(Take(kills, ANSWER_KILLS)) do
+        for _, text in ipairs(Protocol.Kill("R", me, kill)) do texts[#texts + 1] = text end
+    end
     local marks = {}
     for _, mark in pairs(Store.AllWanted()) do
         if Identity.IsSelf(mark.by) then marks[#marks + 1] = mark end
     end
-    return Take(marks, ANSWER_MARKS)
-end
-
--- Withdrawals are stored as "target key|adder key" = time.
-local function OwnWithdrawals(me, now)
-    local list = {}
+    for _, mark in ipairs(Take(marks, ANSWER_MARKS)) do texts[#texts + 1] = Protocol.Wanted(me, mark) end
+    -- Withdrawals are stored as "target key|adder key" = time.
+    local withdrawals = {}
     for pair, at in pairs(ns.db.withdrawals) do
         local targetKey, adderKey = pair:match("^(.*)|(.*)$")
         if adderKey == me.key and now - at <= WITHDRAWAL_AGE then
-            list[#list + 1] = { key = targetKey, at = at }
+            withdrawals[#withdrawals + 1] = { key = targetKey, at = at }
         end
     end
-    return Take(list, ANSWER_WITHDRAWALS)
+    for _, w in ipairs(Take(withdrawals, ANSWER_WITHDRAWALS)) do
+        texts[#texts + 1] = Protocol.Withdrawal(me, w.key, w.at)
+    end
+    return texts
 end
 
-local function SendAnswer()
-    answerScheduled = false
-    lastAnswerAt = GetTime()
-    local since = pendingSince
-    pendingSince = nil
+local function SendAnswer(key)
+    local answer = answers[key]
+    if not answer then return end
+    answer.scheduled, answer.lastAt = false, GetTime()
+    local since = answer.since
+    answer.since = nil
     local me = Me()
-    if not (since and me and CanShare()) then return end
-    local now = ns.Now()
-    for _, kill in ipairs(OwnKillsSince(since, now)) do
-        for _, text in ipairs(Protocol.Kill("R", me, kill)) do Enqueue(text) end
-    end
-    for _, mark in ipairs(OwnMarks()) do Enqueue(Protocol.Wanted(me, mark)) end
-    for _, withdrawal in ipairs(OwnWithdrawals(me, now)) do
-        Enqueue(Protocol.Withdrawal(me, withdrawal.key, withdrawal.at))
-    end
+    if not (since and me and MayShare(answer.route)) then return end
+    for _, text in ipairs(AnswerTexts(since, me, ns.Now())) do Enqueue(text, answer.route) end
 end
 
-local function OnHello(msg, senderKey, now)
-    if not CanShare() then return end
+-- Answers a hello on its route (the guild, or that one friend), merging hellos that
+-- arrive while an answer waits.
+local function OnHello(msg, senderKey, now, route)
+    local friends = Friends()
+    if route ~= GUILD and friends and not friends.Helloed(route) then
+        -- They don't know about us yet: say hello back, so they answer us too.
+        if Share.HelloTo(route) then friends.SetHelloed(route) end
+    end
+    if not MayShare(route) then return end
     if helloAnswered[senderKey] and now - helloAnswered[senderKey] < HELLO_REPEAT then return end
     helloAnswered[senderKey] = now
-    pendingSince = math.min(pendingSince or msg.since, msg.since)
-    if answerScheduled then return end
-    answerScheduled = true
+    local answer = answers[route.key]
+    if not answer then
+        answer = { route = route, scheduled = false }
+        answers[route.key] = answer
+    end
+    answer.route = route
+    answer.since = math.min(answer.since or msg.since, msg.since)
+    if answer.scheduled then return end
+    answer.scheduled = true
     local wait = ANSWER_DELAY_MIN + math.random() * (ANSWER_DELAY_MAX - ANSWER_DELAY_MIN)
-    if lastAnswerAt then wait = math.max(wait, lastAnswerAt + ANSWER_GAP - GetTime()) end
-    ns.After(wait, SendAnswer)
+    if answer.lastAt then wait = math.max(wait, answer.lastAt + ANSWER_GAP - GetTime()) end
+    ns.After(wait, function() SendAnswer(route.key) end)
 end
 
 ---------------------------------------------------------------------------
@@ -308,12 +372,14 @@ local function OnKill(msg, now)
         end
     end
     if #killers == 0 then return end
-    ns.Merge.SubmitKill({
+    local kill, new = ns.Merge.SubmitKill({
         victim = victim, killers = killers, at = msg.at, precision = "exact",
         mapID = msg.mapID, x = msg.x, y = msg.y, zone = MapName(msg.mapID),
         sources = { revenge = true }, own = true, test = msg.test,
         origin = victim.key .. "#" .. msg.id,
     })
+    -- A death just now (not a catch-up answer) alerts once.
+    if new and msg.type == "K" then ns.Try(ns.Alerts and ns.Alerts.FriendKilled, kill) end
 end
 
 local function MarksBy(by)
@@ -347,11 +413,9 @@ end
 
 local handlers = { K = OnKill, R = OnKill, M = OnWanted, X = OnWithdrawal }
 
-local function OnAddonMessage(prefix, text, channel, sender)
-    if prefix ~= PREFIX then return end
-    text, channel, sender = ns.AccessibleString(text), ns.AccessibleString(channel), ns.AccessibleString(sender)
-    -- Guild only for now: whispers wait for friends sharing, with their own checks.
-    if not (text and sender) or channel ~= CHANNEL or #sender > MAX_SENDER then return end
+-- A message from `sender` (the name the game gave) that came by `route`.
+local function Receive(text, sender, route)
+    if not (text and sender) or #sender > MAX_SENDER then return end
     local msg = Protocol.Decode(text)
     if not msg then return ns.Debug("share: dropped a malformed message from %s", sender) end
     local claimedKey = Identity.Key(msg.name)
@@ -361,11 +425,34 @@ local function OnAddonMessage(prefix, text, channel, sender)
     end
     local now = ns.Now()
     if not Allow(claimedKey, now) then return ns.Debug("share: %s is sending too much", sender) end
+    if route ~= GUILD and Friends() then Friends().MarkPeer(route) end
     if msg.type == "H" then
-        OnHello(msg, claimedKey, now)
+        OnHello(msg, claimedKey, now, route)
     else
         handlers[msg.type](msg, now)
     end
+end
+
+local function OnAddonMessage(prefix, text, channel, sender)
+    if prefix ~= PREFIX then return end
+    text, channel, sender = ns.AccessibleString(text), ns.AccessibleString(channel), ns.AccessibleString(sender)
+    if not (text and sender) then return end
+    if channel == "GUILD" then return Receive(text, sender, GUILD) end
+    if channel == "WHISPER" then
+        -- Whispers count only from your in-game friends.
+        local route = Friends() and Friends().FromWhisper(sender)
+        if not route then return ns.Debug("share: dropped a whisper from %s, who isn't a friend", sender) end
+        return Receive(text, sender, route)
+    end
+end
+
+local function OnBattleNetMessage(prefix, text, _, senderID)
+    if prefix ~= PREFIX then return end
+    text, senderID = ns.AccessibleString(text), ns.AccessibleNumber(senderID)
+    if not (text and senderID and Friends()) then return end
+    local route = Friends().FromBattleNet(senderID)
+    if not route then return ns.Debug("share: dropped Battle.net data from an account Revenge doesn't share with") end
+    Receive(text, route.name, route)
 end
 
 function Share:OnLogin()
@@ -373,8 +460,9 @@ function Share:OnLogin()
     if not (C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix and C_ChatInfo.SendAddonMessage) then return end
     Try(C_ChatInfo.RegisterAddonMessagePrefix, PREFIX)
     ns.On("CHAT_MSG_ADDON", OnAddonMessage)
+    ns.On("BN_CHAT_MSG_ADDON", OnBattleNetMessage)
     ns.On("PLAYER_GUILD_UPDATE", function(unit)
-        if unit == nil or unit == "player" then ScheduleHello() end
+        if unit == nil or unit == "player" then ScheduleGuildHello() end
     end)
-    ScheduleHello()
+    ScheduleGuildHello()
 end

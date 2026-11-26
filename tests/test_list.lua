@@ -126,18 +126,23 @@ test("removing your Wanted mark withdraws it; someone else's is hidden for you o
     ok(ns.List.AddByName("Gorvak Ashmane"), "you can add Gorvak again at once")
 end)
 
-test("the settings page: Kills, then Sharing, then the list", function()
+test("the settings page follows the mock-up: Kills, Sharing, Alerts, then the list", function()
     LoadAddon()
-    eq(#Mock.page, 6)
-    eq(Mock.page[1].kind, "header")
-    eq(Mock.page[1].data.name, "Kills")
-    eq(Mock.page[2].kind, "slider")
-    eq(Mock.page[3].kind, "dropdown")
-    eq(Mock.page[4].kind, "header")
-    eq(Mock.page[4].data.name, "Sharing")
-    eq(Mock.page[5].kind, "checkbox")
-    eq(Mock.page[6].template, "RevengeTrackerListTemplate")
-    eq(Mock.page[6]:GetExtent(), 328, "matches the template height")
+    local kinds = {}
+    for i, item in ipairs(Mock.page) do
+        kinds[i] = item.kind == "header" and ("# " .. item.data.name) or item.kind or item.template
+    end
+    eq(table.concat(kinds, ", "), table.concat({
+        "# Kills", "slider", "dropdown", "checkbox", "checkbox",
+        "# Sharing", "checkbox", "checkbox", "checkbox",
+        "# Alerts", "checkbox", "checkbox", "checkbox", "checkbox", "checkbox",
+        "RevengeTrackerListTemplate" }, ", "))
+    eq(Mock.page[#Mock.page]:GetExtent(), 328, "matches the template height")
+    local labels = {}
+    for _, setting in pairs(Mock.settings) do labels[setting.key] = setting.name end
+    eq(labels.nameplates, "Skull beside recent killers' nameplates")
+    eq(labels.shareFriends, "…with in-game friends")
+    eq(labels.alertPopup, "Show alerts as a small popup (silent, fades quickly)")
 end)
 
 test("the list draws one row per player and Remove works from the page", function()
@@ -214,5 +219,5 @@ test("if the list can't be built, the rest of the settings page still is", funct
     Settings.CreateElementInitializer = original
     ok(loaded, tostring(err))
     ok(Mock.registeredCategory, "category registered")
-    eq(#Mock.page, 5)
+    eq(#Mock.page, 15)
 end)

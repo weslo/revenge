@@ -47,10 +47,14 @@ local function AddModifierDropdown()
     Settings.CreateDropdown(category, setting, Options, L.SETTING_MODIFIER_TOOLTIP)
 end
 
-local function AddShareGuild()
+-- A checkbox for a Boolean setting; anything showing data redraws when it changes.
+local function AddCheckbox(key, label, tooltip)
     if not Settings.CreateCheckbox then return end
-    local setting = Register("shareGuild", Settings.VarType.Boolean, L.SETTING_SHARE_GUILD, ns.Store.DEFAULTS.shareGuild)
-    Settings.CreateCheckbox(category, setting, L.SETTING_SHARE_GUILD_TOOLTIP)
+    local setting = Register(key, Settings.VarType.Boolean, label, ns.Store.DEFAULTS[key])
+    Settings.CreateCheckbox(category, setting, tooltip)
+    if Settings.SetOnValueChangedCallback then
+        Settings.SetOnValueChangedCallback(addonName .. "_" .. key, function() ns.Changed() end)
+    end
 end
 
 function Settings_:OnLogin()
@@ -63,8 +67,18 @@ function Settings_:OnLogin()
     AddSectionHeader(L.SECTION_KILLS)
     AddExpirySlider()
     AddModifierDropdown()
+    AddCheckbox("nameplates", L.SETTING_NAMEPLATES, L.SETTING_NAMEPLATES_TOOLTIP)
+    AddCheckbox("mapPins", L.SETTING_MAP_PINS, L.SETTING_MAP_PINS_TOOLTIP)
     AddSectionHeader(L.SECTION_SHARING)
-    AddShareGuild()
+    AddCheckbox("shareGuild", L.SETTING_SHARE_GUILD, L.SETTING_SHARE_GUILD_TOOLTIP)
+    AddCheckbox("shareFriends", L.SETTING_SHARE_FRIENDS, L.SETTING_SHARE_FRIENDS_TOOLTIP)
+    AddCheckbox("shareBattleNet", L.SETTING_SHARE_BNET, L.SETTING_SHARE_BNET_TOOLTIP)
+    AddSectionHeader(L.SECTION_ALERTS)
+    AddCheckbox("alertNearby", L.SETTING_ALERT_NEARBY, L.SETTING_ALERT_NEARBY_TOOLTIP)
+    AddCheckbox("alertFriendKilled", L.SETTING_ALERT_KILLED, L.SETTING_ALERT_KILLED_TOOLTIP)
+    AddCheckbox("alertPopup", L.SETTING_ALERT_POPUP, L.SETTING_ALERT_POPUP_TOOLTIP)
+    AddCheckbox("alertChat", L.SETTING_ALERT_CHAT, L.SETTING_ALERT_CHAT_TOOLTIP)
+    AddCheckbox("alertSound", L.SETTING_ALERT_SOUND, L.SETTING_ALERT_SOUND_TOOLTIP)
     -- The list is the only custom element; if it can't be built, the rest still works.
     local ok, err = pcall(ns.ListPanel.AddTo, layout)
     if not ok then ns.Debug("list error: %s", tostring(err)) end

@@ -4,8 +4,9 @@ A lightweight addon for **World of Warcraft: Forever** (interface 16001). When y
 enemy player, it shows whether they recently killed you, a friend or a guildmate, so you can
 get your revenge.
 
-**Status:** early development. It tracks your own deaths and shares them with guildmates who run
-Revenge; friends and Battle.net friends come next ([#5](https://github.com/weslo/revenge/issues/5)). What's in each version: [changelog](CHANGELOG.md).
+**Status:** early development. It tracks your deaths and shares them with guildmates and friends who
+run Revenge, marks recent killers on their tooltip and nameplate and on the world map, and alerts
+you when one comes into view or a friend is killed. What's in each version: [changelog](CHANGELOG.md).
 
 ## Install
 

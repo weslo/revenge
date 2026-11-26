@@ -72,6 +72,15 @@ class CheckPackage(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("wasn't filled in", out)
 
+    def test_textures_in_media_need_no_toc_entry(self):
+        files = addon_files()
+        self.assertIn("RevengeTracker/Media/Skull.tga", files, "the real texture is packaged")
+        self.assertEqual(check_package.check_zip(self.build(files) / ZIP_NAME), [])
+        files["RevengeTracker/Media/notes.txt"] = b"not a texture"
+        problems = check_package.check_zip(self.build(files) / ZIP_NAME)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("Media/notes.txt", problems[0])
+
     def test_a_missing_or_unlisted_file_fails(self):
         files = addon_files()
         del files["RevengeTracker/Merge.lua"]
