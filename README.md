@@ -4,10 +4,13 @@ A lightweight addon for **World of Warcraft: Forever** (interface 16001). When y
 enemy player, it shows whether they recently killed you, a friend or a guildmate, so you can
 get your revenge.
 
-**Status:** early development. No release to install yet.
+**Status:** early development. No release to install yet; the first one is
+[#3](https://github.com/weslo/revenge/issues/3).
 
 ## Development
 
+- Work is tracked in [Issues](https://github.com/weslo/revenge/issues), one per increment. Each is
+  built on a `feature/<issue>-<name>` branch and lands through a pull request that closes its Issue.
 - The addon is the `RevengeTracker/` folder. For live testing, link it into the game:
   `New-Item -ItemType Junction -Path "<WoW>\_forever_\Interface\AddOns\RevengeTracker" -Target "<repo>\RevengeTracker"`,
   then `/reload` in game after each change.

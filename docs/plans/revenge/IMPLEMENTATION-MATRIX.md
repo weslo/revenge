@@ -2,7 +2,7 @@
 
 - Requirements: [REQUIREMENTS.md](REQUIREMENTS.md)
 - Integration owner: Claude (the session building the addon)
-- Updated: 2026-11-25, planning
+- Updated: 2026-11-25, after S04's in-game check (V-005); work is tracked in GitHub Issues (see the build order)
 - Evidence directory: `docs/plans/revenge/evidence/` (screenshots, Bugsy exports, test notes)
 
 ## Implementation coverage
@@ -13,8 +13,8 @@
 | IMP-002 | 001, 002, 017 | forever | S02: an open-world death records the hostile players from the death recap (retried at 0.3, 1 and 2.5 s; same-faction players skipped); instance deaths ignored. `/revenge test` records a test kill by the current target; `/revenge test clear` removes them. Kills by pets alone aren't counted yet | IMP-001 | Claude | `RevengeTracker/Deaths.lua` | implemented | V-001 pass; V-003 not run |
 | IMP-013 | 024, 025, 001 | forever | S13: the core source layer: normalized kill records, name cache (GUID → full name, class, level, guild, faction; from target, mouseover and nameplates), merge with deduplication and tombstones (own data wins), and the validating `SubmitForeign` door (`RevengeTracker.SubmitForeign`). Revenge's own deaths flow through it. The trust filter and the own-protocol source (`Sources/Revenge.lua`) arrive with sharing in S05 | IMP-002 | Claude | `RevengeTracker/Identity.lua`, `Merge.lua`, `Foreign.lua`, `Store.lua` | implemented (trust filter: S05) | V-001 pass; V-014 pass offline |
 | IMP-018 | 030, 032 | forever | S18: the optional module `RevengeTracker_OtherAddons`: load on demand behind the master switch, prefix routing, pre-checks, bounded queue with a 0.5 ms/frame budget, combat pause, silent `pcall`, per-adapter circuit breaker, status lines; tested with deliberately broken fake adapters | IMP-013, IMP-004, IMP-011 | Claude | `RevengeTracker_OtherAddons/*.toc`, `Host.lua`, `Queue.lua`, `Breaker.lua`; core `Settings.lua` | planned | V-001, V-019 |
-| IMP-003 | 003, 004, 012, 021 | forever | S03: hovering a recorded enemy shows the one skull line "(N) You, …, +N more"; holding the details key (Shift by default) adds up to 5 lines (victim · zone · time ago) and redraws on key change; expiry respected. The "Wanted by" line came with S04 | IMP-013 | Claude | `RevengeTracker/Tooltip.lua` | verified (Wanted line: implemented in S04) | V-001 pass; V-004 pass; Wanted line: V-005 |
-| IMP-004 | 011, 012, 013, 021, 023 | forever | S04: the settings page gets a "Kills" header and, under the slider and dropdown, a "Recent killers (N)" list: Add by name (input box and button, or `/revenge add`), then one row per player (name, level and class or "Not seen yet", the kills summary and/or "Wanted by …", time, Remove). Remove takes that player out of every stored kill, keeping other killers, with tombstones; your own Wanted mark is withdrawn, someone else's hidden for you. The tooltip adds "💀 Wanted by you, Mira" after the kills line and its details. The list redraws on any change and when the expiry changes (DEC-023 to DEC-025) | IMP-002 | Claude | `List.lua`, `ListPanel.lua`, `Templates.xml`, `Settings.lua`, `Merge.lua`, `Store.lua`, `Tooltip.lua` | implemented | V-001 pass; V-014 pass offline; V-005 not run |
+| IMP-003 | 003, 004, 012, 021 | forever | S03: hovering a recorded enemy shows the one skull line "(N) You, …, +N more"; holding the details key (Shift by default) adds up to 5 lines (victim · zone · time ago) and redraws on key change; expiry respected. The "Wanted by" line came with S04 | IMP-013 | Claude | `RevengeTracker/Tooltip.lua` | verified | V-001 pass; V-004 pass; V-005 pass (Wanted line) |
+| IMP-004 | 011, 012, 013, 021, 023 | forever | S04: the settings page gets a "Kills" header and, under the slider and dropdown, a "Recent killers (N)" list: Add by name (input box and button, or `/revenge add`), then one row per player (name, level and class or "Not seen yet", the kills summary and/or "Wanted by …", time, Remove). Remove takes that player out of every stored kill, keeping other killers, with tombstones; your own Wanted mark is withdrawn, someone else's hidden for you. The tooltip adds "💀 Wanted by you, Mira" after the kills line and its details. The list redraws on any change and when the expiry changes (DEC-023 to DEC-025) | IMP-002 | Claude | `List.lua`, `ListPanel.lua`, `Templates.xml`, `Settings.lua`, `Merge.lua`, `Store.lua`, `Tooltip.lua` | verified | V-001 pass; V-014 pass offline; V-005 pass |
 | IMP-005 | 005, 006, 021 | forever | S05: guild sharing; send own deaths and Wanted players, receive guildmates', deduplicate, rate-limit; catch-up on login if Q-010 is accepted | IMP-002, IMP-004 | Claude | `Share.lua`, `Protocol.lua` | planned | V-001, V-006 |
 | IMP-006 | 005, 006, 021 | forever | S06: in-game friends (whisper) and Battle.net friends (game data), with a hello so only friends running Revenge are messaged | IMP-005 | Claude | `Share.lua` | planned | V-001, V-007 |
 | IMP-007 | 009 | forever | S07: optional chat alert when a shared death arrives | IMP-005 | Claude | `Alerts.lua` | planned | V-001, V-008 |
@@ -29,9 +29,11 @@
 | IMP-011 | 016 | forever | S11: GitHub Actions release with the BigWigs packager (zip plus `release.json`); install through instawow | IMP-001 | Claude | `.github/workflows/release.yml`, `.pkgmeta` | planned | V-012 |
 
 Build order (DEC-019, DEC-020: other addons last):
-- **Core:** S01 skeleton → S02 recording → S13 core source layer → S03 tooltip → S04 settings list → S05 guild sharing and catch-up → S06 friends and Battle.net → S07 friend-killed alert → S08 nameplate skull → S09 nearby alert → S10 map pins → S12 popup.
-- **First release:** S11, with no other-addon code.
+- **Core:** S01 skeleton → S02 recording → S13 core source layer → S03 tooltip → S04 settings list → S11 first release → S05 guild sharing and catch-up → S06 friends and Battle.net → S07 friend-killed alert → S08 nameplate skull → S09 nearby alert → S10 map pins → S12 popup.
+- **First release:** S11, with no other-addon code. It moved ahead of S05 so a guildmate or friend can install Revenge for the sharing tests.
 - **Other addons:** S18 optional module → S14 Revenge Book → S15 Grudgekeeper → S16 HeadHunter → S17 Kill on Sight. Each adapter is built only if the previous one proved worth it.
+
+GitHub Issues, one pull request each (DEC-026): #1 S01–S04 (S01, S02, S13, S03, S04) · #2 V-003 · #3 S11 · #4 S05 · #5 S06 · #6 S07 · #7 S08 · #8 S09 · #9 S10 · #10 S12 · #11 S18 · #12 S14 · #13 S15 · #14 S16 · #15 S17.
 
 Statuses: `planned`, `in progress`, `implemented`, `verified`, `blocked`, `deferred`, `superseded`.
 
@@ -43,7 +45,7 @@ Statuses: `planned`, `in progress`, `implemented`, `verified`, `blocked`, `defer
 | V-002 | 013, 014, 015 / S01 | forever 1.60.1 | in-game | | Revenge listed and enabled in the AddOns list; open Options › AddOns › Revenge (slider, dropdown); `/revenge` opens it; change both, `/reload`, values kept; no Bugsy errors. Coexistence with Revenge Book and luisjedev's Revenge is optional now (DEC-022) | User, 2026-11-25: all green. `RevengeTracker.lua` was written with every setting and a full-name cache ("First Last" from target, mouseover and nameplates); `!Bugsy.lua` has `problemCount = 0` after 3 sessions | pass |
 | V-003 | 001, 002, 017 / S02 | forever 1.60.1 | in-game | | Open-world PvP death: entry recorded. Dungeon or battleground death and a duel: nothing recorded. Bugsy clean | | not run |
 | V-004 | 003, 004, 012 / S03 | forever 1.60.1 | in-game | | With sample data, hover the killer: one skull line with the right count and names; hold Shift: detail lines; set the modifier to Off: none; expire a kill: the count drops | User, 2026-11-25: `/revenge test` line "(1) You" with the skull icon; Shift adds the detail line and redraws on press and release; other players show nothing; `/revenge test clear` removes it. Saved data afterwards: no kills, `nextId = 2`. Off and expiry were checked offline only | pass |
-| V-005 | 011, 012, 013, 021, 023 / S04 | forever 1.60.1 | in-game | `dev/s04-list` | Options › AddOns › Revenge: "Kills" header, slider, dropdown, then "Recent killers (0)" with the empty text. `/revenge test` on a target: the list shows them with level, class, "(1) You" and the time. Add by name: a first name alone is refused with a message; a full name is listed as "Wanted by you" and their tooltip gets that line. Remove each: gone from the list and the tooltip. Moving the slider redraws the list. Everything persists across `/reload`; Bugsy clean. The list scrolls past 6 rows. Skull and pins: with S08 and S10 | | not run |
+| V-005 | 011, 012, 013, 021, 023 / S04 | forever 1.60.1 | in-game | `feature/1-first-slices` at `d3ca600` | Options › AddOns › Revenge: "Kills" header, slider, dropdown, then "Recent killers (0)" with the empty text. `/revenge test` on a target: the list shows them with level, class, "(1) You" and the time. Add by name: a first name alone is refused with a message; a full name is listed as "Wanted by you" and their tooltip gets that line. Remove each: gone from the list and the tooltip. Moving the slider redraws the list. Everything persists across `/reload`; Bugsy clean. The list scrolls past 6 rows. Skull and pins: with S08 and S10 | User, 2026-11-25: all green. The saved data afterwards matches the steps: no kills, a per-killer tombstone for the removed test kill, no Wanted marks and a withdrawal for the name added and removed; every setting kept; 1,007 cached names (the cap is 2,000). `!Bugsy.lua`: `problemCount = 0`. Not exercised: scrolling past 6 rows (one name was added) and gamepad reach | pass |
 | V-006 | 005, 006, 021 / S05 | forever 1.60.1 | in-game, 2 clients | | Guildmate dies: entry arrives once; a repeat send is ignored. Guildmate adds a name: you see "Wanted by" and their name; with guild sharing off on their side, nothing arrives | | not run |
 | V-007 | 005, 006 / S06 | forever 1.60.1 | in-game, 2 clients | | Same with an in-game friend and a Battle.net friend | | not run |
 | V-008 | 009 / S07 | forever 1.60.1 | in-game | | Shared death with alert on: one chat line; off: none | | not run |
@@ -70,26 +72,27 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 
 ## Resume checkpoint
 
-- Updated by / at: Claude, 2026-11-25 (after S04)
-- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`, GitHub `weslo/revenge` (public). GitHub `main` has only the first plan (`09cb1b2`); nothing since has been pushed. Local `main` has the plan, the mock-up and S01, S02, S13 and S03 (merge `8dd8d64`). S04 is on `dev/s04-list`, branched from it
-- Exact HEAD revision: see `git log -1` on `dev/s04-list`
-- Working tree: clean after the S04 commit
-- Last completed slice: S04 (settings list, Add by name, Wanted marks), offline only
-- Last verified state: S01 and S03 in game (V-002, V-004 pass, 2026-11-25)
-- Current slice and pending edits: none. The addon folder is linked into the game with a junction: `_forever_\Interface\AddOns\RevengeTracker` → `RevengeTracker\` in this repo, so a `/reload` loads the working tree
-- Next executable action: the user runs V-005 in game (see its row), then merge `dev/s04-list` into `main`. After that, S11 (the first GitHub release) moves ahead of S05 so a friend or guildmate can install Revenge for the sharing tests; then S05
+- Updated by / at: Claude, 2026-11-25 (after S04's in-game check; Issues and pull requests started)
+- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`, GitHub `weslo/revenge` (public). GitHub `main` has only the first plan (`09cb1b2`) until #1's pull request merges. Everything so far (the plan, the mock-up, S01, S02, S13, S03 and S04) is on `feature/1-first-slices`, in that pull request. Local `main` follows `origin/main`
+- Workflow (DEC-026): one GitHub Issue per increment. Each is built on a branch `feature/<issue>-<short-name>` cut from the latest `main`, committed and pushed at clear deliverable steps, and opened as a pull request that closes its Issue. The user reviews and merges; the agent merges only when asked. Start the next branch after the previous pull request merges, from the new `main`
+- Exact HEAD revision: see `git log -1` on the current branch
+- Working tree: clean after each commit
+- Last completed slice: S04 (settings list, Add by name, Wanted marks), verified in game
+- Last verified state: S01, S03 and S04 in game (V-002, V-004, V-005 pass, 2026-11-25); S02 with test kills only (V-003 is #2)
+- Current slice and pending edits: none. The addon folder is linked into the game with a junction: `_forever_\Interface\AddOns\RevengeTracker` → `RevengeTracker\` in this repo, so a `/reload` loads whichever branch is checked out. Never remove, replace or install over that junction: deleting through it deletes the repo's files
+- Next executable action: once the user merges #1's pull request, #3 (S11, the first release) on `feature/3-release`; then #4 (S05). #2 waits for a real PvP death
 - Offline tests: `.venv\Scripts\python.exe -I tests\run.py` (82 passing as of 2026-11-25)
-- Open questions / blockers: Q-009 (at S08), Q-015 (at S18). Resolved: Q-001 to Q-008, Q-010 to Q-014 (DEC-021)
-- Decisions to retain: DEC-001 to DEC-025 (DEC-020: other addons are low priority, isolated, silent on failure, built after the first release; DEC-023 to DEC-025: how the list sits on the page, what Remove removes, and Add by name's rules)
+- Open questions / blockers: Q-009 (at S08, #7), Q-015 (at S18, #11). Resolved: Q-001 to Q-008, Q-010 to Q-014 (DEC-021)
+- Decisions to retain: DEC-001 to DEC-026 (DEC-020: other addons are low priority, isolated, silent on failure, built after the first release; DEC-023 to DEC-025: how the list sits on the page, what Remove removes, and Add by name's rules; DEC-026: Issues and pull requests)
 - Testing choice: the user plays; Bugsy catches errors; the agent reads `RevengeTracker.lua` and `!Bugsy.lua` from `WTF\Account\KYMRELL\SavedVariables` after a `/reload`
 - Controller assessment: the list's Add and Remove are the game's own buttons and input box; gamepad reach unverified (no controller confirmed). `/revenge add` is a keyboard path for adding
 - Options/localization: REQ-013 and REQ-014; English only
-- Read next: REQUIREMENTS.md (requirements, decisions), this checkpoint, then the accepted mock-up
-- Drift since verification: S04 changed the tooltip (Wanted line), the store (Wanted marks, withdrawals, per-killer tombstones) and the settings page (Kills header, list)
+- Read next: REQUIREMENTS.md (requirements, decisions), this checkpoint, the open Issues, then the accepted mock-up
+- Drift since verification: none
 
 ## Coverage reconciliation
 
 - Requirements missing matrix rows: none (REQ-017 and REQ-018 are cross-cutting and checked in V-001 and V-003)
 - Implemented requirements awaiting acceptance: none
 - Unresolved target-specific gaps: `UnitGUID` identity restriction in PvP (REQ-017); `TooltipDataProcessor` and map-pin templates not in the generated index
-- Remaining requested work: all
+- Remaining requested work: V-003 (#2) and S11, S05 to S10, S12, S18 and S14 to S17 (#3 to #15)

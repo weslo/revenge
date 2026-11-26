@@ -1,7 +1,7 @@
 # Revenge requirements
 
-- Project/repository: `C:\Users\wesle\Documents\GitHub\revenge` (local; GitHub repo `revenge`, public, to be created by the agent once the user approves this plan)
-- Updated: 2026-11-25, by Claude (S04 decisions DEC-023 to DEC-025)
+- Project/repository: `C:\Users\wesle\Documents\GitHub\revenge` (GitHub `weslo/revenge`, public; work is tracked in its Issues, DEC-026)
+- Updated: 2026-11-25, by Claude (V-005 passed; DEC-026, Issues and pull requests)
 - Implementation matrix: [IMPLEMENTATION-MATRIX.md](IMPLEMENTATION-MATRIX.md)
 - Original request: on a PvP realm, "when hovering an enemy on the opposing faction, [see] whether they've killed you or your friends or guildies recently, so you can get vengeance." Revenge Book does this but "the book interface etc is a little over complicated."
 - Goal: a lightweight World of Warcraft: Forever addon that marks enemy players who recently killed you, a friend or a guildmate, mainly through their tooltip, with a few optional extras and plain settings.
@@ -92,7 +92,7 @@
 
 ## Testing preference
 
-- Route and source: pending, to be asked at testing time. The likely route: the user plays, Bugsy (installed 2026-11-25) catches errors, and the agent reads Bugsy's saved errors and screenshots. Witchcraft is not set up.
+- Route and source: the user plays, Bugsy (installed 2026-11-25) catches errors, and the agent reads the saved files after a `/reload` (in use since S01). Witchcraft is not set up.
 - Remaining real-client checks: everything marked in-game in the matrix. Sharing needs a second person or account on the user's guild or friends list. Kill checks need real open-world PvP deaths; a debug-only command will inject sample data for the tooltip, list and pins.
 - Controller checks: pending (see above).
 
@@ -110,10 +110,10 @@
 | Q-008 | What a player added by name shows before any kills | 003, 007, 011 | resolved | Skull, alerts and "💀 Wanted by {who added them}", shared like deaths (DEC-015, REQ-021) |
 | Q-009 | Which nameplate addon to test the skull with: the user runs none today. Proposal: Threat Plates (`curse:21217`, Forever build, about 40M downloads) or Platynator (`curse:1361299`) in a test profile. | 007 | Only V-009 depends on it | pending (agent, at testing) |
 | Q-010 | Catch-up for friends who were offline | 005, 006, 021 | resolved | Agreed as proposed (DEC-017, REQ-022) |
-| Q-012 | Accept other addons' reports from players who aren't guildmates or friends (HeadHunter gossip, public channels)? Proposal: never | 006, 024, 028 | Affects the trust filter only | pending (user) |
-| Q-013 | Show "via Revenge Book" in Shift details? Proposal: yes, grey, only when no Revenge user reported the kill | 004, 030 | Display only | pending (user) |
+| Q-012 | Accept other addons' reports from players who aren't guildmates or friends (HeadHunter gossip, public channels)? Proposal: never | 006, 024, 028 | Affects the trust filter only | resolved: never (DEC-021) |
+| Q-013 | Show "via Revenge Book" in Shift details? Proposal: yes, grey, only when no Revenge user reported the kill | 004, 030 | Display only | resolved: yes, as proposed (DEC-021) |
 | Q-015 | Which other addon to support first, now that the user doesn't run Revenge Book (DEC-022): Revenge Book (if guildmates use it) or Grudgekeeper? | 026, 027 | Decided when S18 starts; nothing blocked before then | pending (user, at S18) |
-| Q-014 | Spy (Forever), True Spy, Spy Guild KOS Sync and PlayerNotes & KoS have no public source. Install one through the CurseForge app so the agent can read the installed files, or leave them out? | 024 | Blocks any adapter for them | pending (user) |
+| Q-014 | Spy (Forever), True Spy, Spy Guild KOS Sync and PlayerNotes & KoS have no public source. Install one through the CurseForge app so the agent can read the installed files, or leave them out? | 024 | Blocks any adapter for them | resolved: left out for now (DEC-021) |
 | Q-011 | How Wanted entries end | 011, 012, 021 | resolved | Agreed as proposed (DEC-018, REQ-023) |
 
 ## Decisions and scope changes
@@ -141,9 +141,10 @@
 | DEC-019 / 2026-11-25 | User, in chat | Add a layer that takes in messages from other popular addons (like Revenge Book) and deduplicates as well as possible; plan it before implementation starts | 024+ | See OTHER-ADDONS.md |
 | DEC-022 / 2026-11-25 | User, in chat: "Uninstall Revenge Book" | Revenge Book is no longer installed here. Coexistence (REQ-015) is still kept for other users. The Revenge Book adapter (REQ-026) now matters only when guildmates run it, and its saved-data import only for users who run both | 015, 026; supersedes DEC-007 | Which adapter comes first is decided when S18 starts (Q-015) |
 | DEC-021 / 2026-11-25 | User, in chat: "Approved, begin development" | The other-addon plan as proposed: no reports from strangers (Q-012), grey "via Revenge Book" in Shift details (Q-013), Spy and relatives left out for now (Q-014) | 024–032 | Development started with S01 |
-| DEC-023 / 2026-11-25 | Implementation (S04) | The list is one custom element of the game's own vertical settings list, on the same page as the other settings, as in the accepted mock-up. The page is one column rather than the mock-up's two, because the game's settings list is a single column. Its rows scroll inside the element (6 visible) | 011, 013 | Check the look in game (V-005) |
+| DEC-023 / 2026-11-25 | Implementation (S04) | The list is one custom element of the game's own vertical settings list, on the same page as the other settings, as in the accepted mock-up. The page is one column rather than the mock-up's two, because the game's settings list is a single column. Its rows scroll inside the element (6 visible) | 011, 013 | V-005 pass (2026-11-25) |
 | DEC-024 / 2026-11-25 | Implementation (S04) | Remove on the list takes that player out of every stored kill they're in; other killers in the same kill stay. A tombstone keeps them out of re-reports of those deaths, while new deaths still count. Dismiss kill on a map pin (REQ-020, S10) removes the whole kill instead | 011, 020, 025 | none |
 | DEC-025 / 2026-11-25 | Implementation (S04) | Add by name takes letters (any language), spaces, hyphens and apostrophes only, so no chat codes or links get in. It needs first and last name where the game uses surnames (a first name alone could match many players), refuses your own name and, when the name cache knows them, a player of your own faction. A name seen before takes the game's spelling, GUID, class and level; one not seen yet gets them the first time it's seen | 011, 021 | none |
+| DEC-026 / 2026-11-25 | User, in chat | Work goes through GitHub: one Issue per increment (#1 for the work so far), a feature branch per Issue, commits pushed at clear deliverable steps, and a pull request against its Issue for the user to review. The user merges | all | Issues #1 to #15 created; the matrix's build order maps them to slices |
 | DEC-020 / 2026-11-25 | User, in chat | Other addons are low priority for performance and maintenance. Failures are silently disregarded and can't affect performance or functionality, and there's an easy off switch | 024, 026–030, 032 | Optional load-on-demand module; adapters built after the core and its first release; REQ-032 added |
 
 ## Completion criteria
