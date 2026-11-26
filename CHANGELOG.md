@@ -1,6 +1,6 @@
 # Revenge changelog
 
-## Unreleased
+## v0.2.0
 
 - Guild sharing: your deaths and the players you mark Wanted reach guildmates who run Revenge,
   and theirs reach you. Their kills show on the killer's tooltip and in your list, and their
