@@ -13,4 +13,7 @@ Merge.lua
 Foreign.lua
 Deaths.lua
 Tooltip.lua
+List.lua
+Templates.xml
+ListPanel.lua
 Settings.lua

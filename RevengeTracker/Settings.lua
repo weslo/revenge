@@ -1,20 +1,22 @@
 -- Settings: the "Revenge" category in Options > AddOns, built from the game's own
--- controls. Controls for later features are added as those features land.
+-- controls, with the "Recent killers" list (ListPanel.lua) at the end. Controls for
+-- later features are added as those features land.
 local addonName, ns = ...
 
 local Settings_ = ns.RegisterModule("Settings", {})
 local L = ns.L
 
-local category
+local category, layout
 
 local function Register(key, varType, label, default)
     return Settings.RegisterAddOnSetting(category, addonName .. "_" .. key, key,
         ns.db.settings, varType, label, default)
 end
 
-local function DaysLabel(value)
-    value = math.floor(value + 0.5)
-    return value == 1 and L.DAYS_ONE or L.DAYS_MANY:format(value)
+local function AddSectionHeader(name)
+    if layout and layout.AddInitializer and CreateSettingsListSectionHeaderInitializer then
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(name))
+    end
 end
 
 local function AddExpirySlider()
@@ -22,9 +24,13 @@ local function AddExpirySlider()
     local setting = Register("expiryDays", Settings.VarType.Number, L.SETTING_EXPIRY, ns.Store.DEFAULTS.expiryDays)
     local options = Settings.CreateSliderOptions(1, 30, 1)
     if options.SetLabelFormatter and MinimalSliderWithSteppersMixin and MinimalSliderWithSteppersMixin.Label then
-        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, DaysLabel)
+        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, ns.DaysText)
     end
     Settings.CreateSlider(category, setting, options, L.SETTING_EXPIRY_TOOLTIP)
+    -- Tooltips read the setting live; the list (and later the skulls and pins) redraw.
+    if Settings.SetOnValueChangedCallback then
+        Settings.SetOnValueChangedCallback(addonName .. "_expiryDays", function() ns.Changed() end)
+    end
 end
 
 local function AddModifierDropdown()
@@ -47,9 +53,13 @@ function Settings_:OnLogin()
         ns.Print(L.SETTINGS_UNAVAILABLE)
         return
     end
-    category = Settings.RegisterVerticalLayoutCategory(L.TITLE)
+    category, layout = Settings.RegisterVerticalLayoutCategory(L.TITLE)
+    AddSectionHeader(L.SECTION_KILLS)
     AddExpirySlider()
     AddModifierDropdown()
+    -- The list is the only custom element; if it can't be built, the rest still works.
+    local ok, err = pcall(ns.ListPanel.AddTo, layout)
+    if not ok then ns.Debug("list error: %s", tostring(err)) end
     Settings.RegisterAddOnCategory(category)
     Settings_.category = category
 end

@@ -101,7 +101,22 @@ local function Observe(unit)
     entry.g = identity.guild or entry.g
     entry.f = identity.faction or entry.f
     entry.t = now
-    if learnedFullName then ns.Merge.UpgradeIdentity(guid) end
+    if learnedFullName then ns.Merge.UpgradeIdentity(guid, Identity.Key(identity.name)) end
+end
+
+-- A cached player by name key: their GUID and cache entry, or nil. Scans the whole
+-- cache, so it's for user actions like Add by name, not for every frame.
+function Identity.FindByName(key)
+    if not key then return nil end
+    for guid, entry in pairs(ns.db.names) do
+        if type(entry) == "table" and Identity.Key(entry.n) == key then return guid, entry end
+    end
+end
+
+function Identity.Copy(identity)
+    local copy = {}
+    for field, value in pairs(identity) do copy[field] = value end
+    return copy
 end
 
 -- Fills in an identity from the cache and GetPlayerInfoByGUID.

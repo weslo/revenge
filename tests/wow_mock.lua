@@ -57,17 +57,76 @@ function Mock.Advance(seconds)
     Mock.now = Mock.now + math.floor(seconds)
 end
 
-local FrameMethods = {}
-FrameMethods.__index = FrameMethods
-function FrameMethods:RegisterEvent(event)
+---------------------------------------------------------------------------
+-- Widgets: frames, font strings and textures share one forgiving stand-in.
+-- Methods that matter to tests (text, scripts, shown state, scroll box rows)
+-- are real; any other capitalized method is accepted and does nothing, so UI
+-- code runs end to end. Addon fields must start lower-case to be stored.
+---------------------------------------------------------------------------
+local function NoOp() end
+local W = {}
+local WidgetMeta = {
+    __index = function(_, key)
+        local method = W[key]
+        if method then return method end
+        if type(key) == "string" and key:match("^%u") then return NoOp end
+        return nil
+    end,
+}
+
+local function NewWidget(kind, parent, template)
+    local widget = setmetatable({ kind = kind, parent = parent, template = template, scripts = {},
+                                  text = nil, shown = true }, WidgetMeta)
+    if template == "InputBoxInstructionsTemplate" then
+        widget.Instructions = NewWidget("FontString", widget)
+    end
+    return widget
+end
+
+function W:RegisterEvent(event)
     Mock.events[event] = Mock.events[event] or {}
     table.insert(Mock.events[event], self)
 end
-function FrameMethods:SetScript(name, fn) self.scripts[name] = fn end
-
-function CreateFrame()
-    return setmetatable({ scripts = {} }, FrameMethods)
+function W:SetScript(name, fn) self.scripts[name] = fn end
+function W:GetScript(name) return self.scripts[name] end
+function W:SetText(text) self.text = text end
+function W:GetText() return self.text or "" end
+function W:SetTextColor(r, g, b) self.color = { r, g, b } end
+function W:Show() self.shown = true end
+function W:Hide() self.shown = false end
+function W:SetShown(shown) self.shown = not not shown end
+function W:IsShown() return self.shown end
+function W:IsVisible() return self.shown end
+function W:Click() if self.scripts.OnClick then self.scripts.OnClick(self, "LeftButton") end end
+function W:CreateFontString() return NewWidget("FontString", self) end
+function W:CreateTexture() return NewWidget("Texture", self) end
+-- Scroll boxes: SetDataProvider "renders" every item into pooled row frames.
+function W:SetDataProvider(provider)
+    self.pool = self.pool or {}
+    self.rendered = {}
+    local view = self.view
+    for i, item in ipairs(provider.items) do
+        local row = self.pool[i] or NewWidget("Frame", self, view.template)
+        self.pool[i] = row
+        view.initializer(row, item)
+        self.rendered[i] = row
+    end
 end
+
+function CreateFrame(kind, _, parent, template)
+    return NewWidget(kind or "Frame", parent, template)
+end
+
+function CreateScrollBoxListLinearView()
+    local view = {}
+    function view:SetElementInitializer(template, fn) self.template, self.initializer = template, fn end
+    function view:SetElementExtent(extent) self.extent = extent end
+    return view
+end
+function CreateDataProvider(items) return { items = items or {} } end
+ScrollUtil = { InitScrollBoxListWithScrollBar = function(box, _, view) box.view = view end }
+ScrollBoxConstants = { RetainScrollPosition = true }
+LOCALIZED_CLASS_NAMES_MALE = { ROGUE = "Rogue", HUNTER = "Hunter", MAGE = "Mage", WARRIOR = "Warrior" }
 
 function Mock.Fire(event, ...)
     for _, frame in ipairs(Mock.events[event] or {}) do
@@ -105,7 +164,7 @@ end
 function UnitLevel(unit) local u = U(unit) return u and u.level or 0 end
 function UnitFactionGroup(unit) local u = U(unit) return u and u.faction, u and u.faction end
 function GetGuildInfo(unit) local u = U(unit) return u and u.guild end
-function RegionalUniqueNamesEnabled() return true end
+function RegionalUniqueNamesEnabled() return Mock.uniqueNames end
 
 -- Mock.byGuid[guid] = { name, class, level } for GetPlayerInfoByGUID
 function GetPlayerInfoByGUID(guid)
@@ -168,27 +227,58 @@ function Mock.Hover(unit)
     return GameTooltip.lines
 end
 
-local function NoOp() end
 MinimalSliderWithSteppersMixin = { Label = { Right = 1 } }
+
+-- The settings list: initializers in page order. Mock.ShowSettings() displays the
+-- page, calling each custom element's InitFrame with a frame from its template.
+local function Initializer(template, data)
+    return { template = template, data = data or {}, AddSearchTags = NoOp }
+end
+local function AddToPage(kind)
+    return function() table.insert(Mock.page, { kind = kind }) end
+end
+function CreateSettingsListSectionHeaderInitializer(name)
+    local initializer = Initializer("SettingsListSectionHeaderTemplate", { name = name })
+    initializer.kind = "header"
+    return initializer
+end
+
+function Mock.ShowSettings()
+    local frames = {}
+    for _, initializer in ipairs(Mock.page) do
+        if initializer.InitFrame then
+            local frame = Mock.pageFrames[initializer] or CreateFrame("Frame", nil, nil, initializer.template)
+            Mock.pageFrames[initializer] = frame
+            frame.shown = true
+            initializer:InitFrame(frame)
+            frames[#frames + 1] = frame
+        end
+    end
+    return frames
+end
+
 Settings = {
     VarType = { Boolean = "boolean", String = "string", Number = "number" },
     RegisterVerticalLayoutCategory = function(name)
         Mock.settingsCategory = { name = name, GetID = function() return 42 end }
-        return Mock.settingsCategory
+        local layout = { AddInitializer = function(_, initializer) table.insert(Mock.page, initializer) end }
+        return Mock.settingsCategory, layout
     end,
+    CreateElementInitializer = Initializer,
+    SetOnValueChangedCallback = function(variable, fn) Mock.valueCallbacks[variable] = fn end,
     RegisterAddOnSetting = function(_, variable, key, tbl, varType, name, default)
         Mock.settings[variable] = { key = key, tbl = tbl, varType = varType, name = name, default = default }
         return Mock.settings[variable]
     end,
-    CreateCheckbox = NoOp,
+    CreateCheckbox = AddToPage("checkbox"),
     CreateSliderOptions = function() return { SetLabelFormatter = NoOp } end,
-    CreateSlider = NoOp,
+    CreateSlider = AddToPage("slider"),
     CreateControlTextContainer = function()
         local data = {}
         return { Add = function(_, value, label) table.insert(data, { value = value, label = label }) end,
                  GetData = function() return data end }
     end,
-    CreateDropdown = NoOp,
+    CreateDropdown = AddToPage("dropdown"),
     RegisterAddOnCategory = function(category) Mock.registeredCategory = category end,
     OpenToCategory = function(id) Mock.openedCategory = id end,
 }
@@ -218,5 +308,8 @@ function Mock.Reset()
     Mock.tooltipCalls = {}
     Mock.settings = {}
     Mock.settingsCategory, Mock.registeredCategory, Mock.openedCategory = nil, nil, nil
+    Mock.page, Mock.pageFrames = {}, {}
+    Mock.valueCallbacks = {}
+    Mock.uniqueNames = true
     GameTooltip.lines, GameTooltip.unit, GameTooltip.shown = {}, nil, false
 end

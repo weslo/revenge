@@ -1,0 +1,11 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- The "Recent killers" element on Revenge's settings page and its rows.
+         Empty on purpose: ListPanel.lua builds their contents. They exist so the
+         settings list and the row scroll box keep Revenge's frames in their own pools. -->
+    <Frame name="RevengeTrackerListTemplate" virtual="true">
+        <Size x="600" y="328"/>
+    </Frame>
+    <Frame name="RevengeTrackerListRowTemplate" virtual="true">
+        <Size x="560" y="38"/>
+    </Frame>
+</Ui>

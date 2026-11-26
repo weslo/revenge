@@ -45,6 +45,20 @@ function ns.Now()
     return GetServerTime()
 end
 
+-- "5m ago", "2h ago", "3d ago"
+function ns.Ago(seconds)
+    seconds = math.max(0, seconds)
+    if seconds < 3600 then return L.AGO_MINUTES:format(math.max(1, math.floor(seconds / 60))) end
+    if seconds < 86400 then return L.AGO_HOURS:format(math.floor(seconds / 3600)) end
+    return L.AGO_DAYS:format(math.floor(seconds / 86400))
+end
+
+-- "1 day", "7 days"
+function ns.DaysText(value)
+    value = math.floor(value + 0.5)
+    return value == 1 and L.DAYS_ONE or L.DAYS_MANY:format(value)
+end
+
 ---------------------------------------------------------------------------
 -- Chat output
 ---------------------------------------------------------------------------
@@ -83,6 +97,22 @@ frame:SetScript("OnEvent", function(_, event, ...)
         if not ok then ns.Debug("%s handler error: %s", event, tostring(err)) end
     end
 end)
+
+-- Data changes: anything showing kills or Wanted marks (the settings list now;
+-- nameplates and map pins later) subscribes with ns.OnChange(fn). Merge and the
+-- list call ns.Changed() after changing stored data.
+local changeListeners = {}
+
+function ns.OnChange(fn)
+    changeListeners[#changeListeners + 1] = fn
+end
+
+function ns.Changed()
+    for i = 1, #changeListeners do
+        local ok, err = pcall(changeListeners[i])
+        if not ok then ns.Debug("change listener error: %s", tostring(err)) end
+    end
+end
 
 -- Runs fn after delay seconds, isolated like an event handler.
 function ns.After(delay, fn)
@@ -129,7 +159,7 @@ end)
 ---------------------------------------------------------------------------
 local function ShowHelp()
     ns.Print(L.HELP_HEADER)
-    for _, line in ipairs({ L.HELP_OPEN, L.HELP_TEST, L.HELP_TEST_CLEAR, L.HELP_DEBUG }) do
+    for _, line in ipairs({ L.HELP_OPEN, L.HELP_ADD, L.HELP_TEST, L.HELP_TEST_CLEAR, L.HELP_DEBUG }) do
         DEFAULT_CHAT_FRAME:AddMessage("  " .. line)
     end
 end
@@ -148,6 +178,11 @@ function commands.test(rest)
     end
     ns.Deaths.RecordTestKill(killer)
     ns.Print(L.TEST_ADDED, killer.name)
+end
+
+function commands.add(rest)
+    local _, message = ns.List.AddByName(rest)
+    ns.Print(message)
 end
 
 function commands.debug()

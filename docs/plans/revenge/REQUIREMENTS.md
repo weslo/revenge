@@ -1,7 +1,7 @@
 # Revenge requirements
 
 - Project/repository: `C:\Users\wesle\Documents\GitHub\revenge` (local; GitHub repo `revenge`, public, to be created by the agent once the user approves this plan)
-- Updated: 2026-11-25, by Claude (planning session; mock-up comments applied)
+- Updated: 2026-11-25, by Claude (S04 decisions DEC-023 to DEC-025)
 - Implementation matrix: [IMPLEMENTATION-MATRIX.md](IMPLEMENTATION-MATRIX.md)
 - Original request: on a PvP realm, "when hovering an enemy on the opposing faction, [see] whether they've killed you or your friends or guildies recently, so you can get vengeance." Revenge Book does this but "the book interface etc is a little over complicated."
 - Goal: a lightweight World of Warcraft: Forever addon that marks enemy players who recently killed you, a friend or a guildmate, mainly through their tooltip, with a few optional extras and plain settings.
@@ -83,7 +83,7 @@
 | UI element or control group | Role | Controller path and visible cues | Target evidence / gaps | Acceptance or explicit user exclusion |
 |---|---|---|---|---|
 | Tooltip lines, nameplate mark, chat alerts | passive | Not interactive. They appear with the game's own tooltip, nameplates and chat, whatever the input | none | not applicable |
-| Settings controls and list | interactive | Built from the game's native settings controls, which carry the settings panel's own gamepad focus and navigation | Confirm the remove button is reachable with a gamepad on Forever | pending check (no controller confirmed) |
+| Settings controls and list | interactive | Built from the game's native settings controls, which carry the settings panel's own gamepad focus and navigation. The list's input box and Add and Remove buttons are the game's own templates; `/revenge add First Last` is a keyboard path for adding | Confirm the input box and Remove buttons are reachable with a gamepad on Forever | pending check (no controller confirmed) |
 | Map pins and their right-click menu | interactive | Shown on the game's world map; hover and the "Dismiss kill" menu follow the map's own cursor handling. Dismissing is also possible from the settings list (remove), so a gamepad user isn't stuck | gamepad hover and right-click on map pins unverified | pending check |
 | Alert popup | passive, click to dismiss | Not focusable; it fades by itself, so no controller action is needed | none | not applicable |
 
@@ -141,6 +141,9 @@
 | DEC-019 / 2026-11-25 | User, in chat | Add a layer that takes in messages from other popular addons (like Revenge Book) and deduplicates as well as possible; plan it before implementation starts | 024+ | See OTHER-ADDONS.md |
 | DEC-022 / 2026-11-25 | User, in chat: "Uninstall Revenge Book" | Revenge Book is no longer installed here. Coexistence (REQ-015) is still kept for other users. The Revenge Book adapter (REQ-026) now matters only when guildmates run it, and its saved-data import only for users who run both | 015, 026; supersedes DEC-007 | Which adapter comes first is decided when S18 starts (Q-015) |
 | DEC-021 / 2026-11-25 | User, in chat: "Approved, begin development" | The other-addon plan as proposed: no reports from strangers (Q-012), grey "via Revenge Book" in Shift details (Q-013), Spy and relatives left out for now (Q-014) | 024–032 | Development started with S01 |
+| DEC-023 / 2026-11-25 | Implementation (S04) | The list is one custom element of the game's own vertical settings list, on the same page as the other settings, as in the accepted mock-up. The page is one column rather than the mock-up's two, because the game's settings list is a single column. Its rows scroll inside the element (6 visible) | 011, 013 | Check the look in game (V-005) |
+| DEC-024 / 2026-11-25 | Implementation (S04) | Remove on the list takes that player out of every stored kill they're in; other killers in the same kill stay. A tombstone keeps them out of re-reports of those deaths, while new deaths still count. Dismiss kill on a map pin (REQ-020, S10) removes the whole kill instead | 011, 020, 025 | none |
+| DEC-025 / 2026-11-25 | Implementation (S04) | Add by name takes letters (any language), spaces, hyphens and apostrophes only, so no chat codes or links get in. It needs first and last name where the game uses surnames (a first name alone could match many players), refuses your own name and, when the name cache knows them, a player of your own faction. A name seen before takes the game's spelling, GUID, class and level; one not seen yet gets them the first time it's seen | 011, 021 | none |
 | DEC-020 / 2026-11-25 | User, in chat | Other addons are low priority for performance and maintenance. Failures are silently disregarded and can't affect performance or functionality, and there's an easy off switch | 024, 026–030, 032 | Optional load-on-demand module; adapters built after the core and its first release; REQ-032 added |
 
 ## Completion criteria

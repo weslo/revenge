@@ -2,6 +2,8 @@
 --   [skull] (5) You, Mira, Tavish, +1 more
 -- and, while the details key is held, one line per recent kill:
 --   You · Hillsbrad Foothills · 2h ago
+-- A player marked Wanted gets one more line after those:
+--   [skull] Wanted by you, Mira
 local _, ns = ...
 
 local Tooltip = ns.RegisterModule("Tooltip", {})
@@ -15,6 +17,8 @@ local DETAIL_R, DETAIL_G, DETAIL_B = 0.79, 0.81, 0.84
 local MAX_NAMES = 3
 local MAX_DETAILS = 5
 
+Tooltip.SKULL = SKULL
+
 local MODIFIERS = {
     SHIFT = IsShiftKeyDown,
     CTRL = IsControlKeyDown,
@@ -26,17 +30,9 @@ local function DetailsWanted()
     return check and check() or false
 end
 
-local function Ago(seconds)
-    if seconds < 3600 then return L.AGO_MINUTES:format(math.max(1, math.floor(seconds / 60))) end
-    if seconds < 86400 then return L.AGO_HOURS:format(math.floor(seconds / 3600)) end
-    return L.AGO_DAYS:format(math.floor(seconds / 86400))
-end
-
--- Recent kills by this unit's player, newest first.
-local function RecentKills(unit)
-    local identity = Identity.FromUnit(unit)
-    if not identity then return nil end
-    local now, recent = ns.Now(), {}
+-- Recent kills by this player, newest first.
+function Tooltip.RecentKillsBy(identity, now)
+    local recent = {}
     for _, kill in ipairs(Store.KillsByKiller(identity.guid, identity.key)) do
         if Store.IsRecent(kill, now) then
             for _, killer in ipairs(kill.killers) do
@@ -47,45 +43,87 @@ local function RecentKills(unit)
             end
         end
     end
-    return recent, now
+    return recent
+end
+
+-- Wanted marks on this player that you haven't hidden, newest first.
+function Tooltip.WantedMarksOn(identity)
+    local marks = {}
+    for _, mark in ipairs(Store.WantedFor(identity.guid, identity.key)) do
+        if not mark.hidden and Identity.Same(mark.target, identity) then marks[#marks + 1] = mark end
+    end
+    return marks
+end
+
+-- "You, Mira, Tavish, +1 more": `first` (if any) leads, then the others in order.
+local function NameList(first, others)
+    local names = {}
+    if first then names[1] = first end
+    for _, name in ipairs(others) do names[#names + 1] = name end
+    local shown = {}
+    for i = 1, math.min(#names, MAX_NAMES) do shown[i] = names[i] end
+    local text = table.concat(shown, L.LIST_AND)
+    if #names > MAX_NAMES then text = text .. L.LIST_AND .. L.MORE:format(#names - MAX_NAMES) end
+    return text
 end
 
 -- "(5) You, Mira, Tavish, +1 more": You first, then the others newest first.
-local function SummaryText(kills)
-    local names, seen, others = {}, {}, {}
+function Tooltip.SummaryText(kills)
+    local seen, others, you = {}, {}, nil
     for _, kill in ipairs(kills) do
         local victim = kill.victim
         local key = victim.guid or victim.key
         if key and not seen[key] then
             seen[key] = true
             if Identity.IsSelf(victim) then
-                table.insert(names, 1, L.YOU)
+                you = L.YOU
             else
                 others[#others + 1] = Identity.ShortName(victim)
             end
         end
     end
-    for _, name in ipairs(others) do names[#names + 1] = name end
-    local shown = {}
-    for i = 1, math.min(#names, MAX_NAMES) do shown[i] = names[i] end
-    local text = ("(%d) %s"):format(#kills, table.concat(shown, L.LIST_AND))
-    if #names > MAX_NAMES then text = text .. L.LIST_AND .. L.MORE:format(#names - MAX_NAMES) end
-    return text
+    return ("(%d) %s"):format(#kills, NameList(you, others))
+end
+
+-- "Wanted by you, Mira": you first, then the other adders newest first.
+function Tooltip.WantedText(marks)
+    local seen, others, you = {}, {}, nil
+    for _, mark in ipairs(marks) do
+        local by = mark.by
+        local key = by.guid or by.key
+        if key and not seen[key] then
+            seen[key] = true
+            if Identity.IsSelf(by) then
+                you = L.YOU_LOWER
+            else
+                others[#others + 1] = Identity.ShortName(by)
+            end
+        end
+    end
+    return L.WANTED_BY:format(NameList(you, others))
 end
 
 local function AddLines(tooltip, unit)
-    local kills, now = RecentKills(unit)
-    if not kills or #kills == 0 then return end
-    tooltip:AddLine(SKULL .. SummaryText(kills), LINE_R, LINE_G, LINE_B)
-    if DetailsWanted() then
-        for i = 1, math.min(#kills, MAX_DETAILS) do
-            local kill = kills[i]
-            local text = ("%s · %s · %s"):format(Identity.LongName(kill.victim), kill.zone or L.UNKNOWN_ZONE, Ago(now - kill.at))
-            tooltip:AddLine(text, DETAIL_R, DETAIL_G, DETAIL_B)
+    local identity = Identity.FromUnit(unit)
+    if not identity then return end
+    local now = ns.Now()
+    local kills = Tooltip.RecentKillsBy(identity, now)
+    if #kills > 0 then
+        tooltip:AddLine(SKULL .. Tooltip.SummaryText(kills), LINE_R, LINE_G, LINE_B)
+        if DetailsWanted() then
+            for i = 1, math.min(#kills, MAX_DETAILS) do
+                local kill = kills[i]
+                local text = ("%s · %s · %s"):format(Identity.LongName(kill.victim), kill.zone or L.UNKNOWN_ZONE, ns.Ago(now - kill.at))
+                tooltip:AddLine(text, DETAIL_R, DETAIL_G, DETAIL_B)
+            end
+            if #kills > MAX_DETAILS then
+                tooltip:AddLine(L.MORE:format(#kills - MAX_DETAILS), DETAIL_R, DETAIL_G, DETAIL_B)
+            end
         end
-        if #kills > MAX_DETAILS then
-            tooltip:AddLine(L.MORE:format(#kills - MAX_DETAILS), DETAIL_R, DETAIL_G, DETAIL_B)
-        end
+    end
+    local marks = Tooltip.WantedMarksOn(identity)
+    if #marks > 0 then
+        tooltip:AddLine(SKULL .. Tooltip.WantedText(marks), LINE_R, LINE_G, LINE_B)
     end
 end
 

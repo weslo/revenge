@@ -8,7 +8,8 @@ local function TocFiles()
     local files = {}
     for line in io.lines(ROOT .. "/RevengeTracker/RevengeTracker.toc") do
         line = line:match("^%s*(.-)%s*$")
-        if line ~= "" and not line:match("^#") then
+        -- XML files hold frame templates, which the mock doesn't need.
+        if line ~= "" and not line:match("^#") and not line:lower():match("%.xml$") then
             files[#files + 1] = ROOT .. "/RevengeTracker/" .. line:gsub("\\", "/")
         end
     end
@@ -58,7 +59,7 @@ function count(t)
     return n
 end
 
-for _, file in ipairs({ "test_identity", "test_merge", "test_foreign", "test_deaths", "test_tooltip", "test_store" }) do
+for _, file in ipairs({ "test_identity", "test_merge", "test_foreign", "test_deaths", "test_tooltip", "test_store", "test_wanted", "test_list" }) do
     dofile(ROOT .. "/tests/" .. file .. ".lua")
 end
 

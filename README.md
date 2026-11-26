@@ -16,7 +16,8 @@ get your revenge.
 - Offline tests run under real Lua 5.1 against a mock of the game's API (`tests/wow_mock.lua`):
   set up once with `python -m venv .venv` and `.venv\Scripts\python.exe -m pip install lupa==2.8`,
   then run `.venv\Scripts\python.exe -I tests\run.py` (optionally with a test-name filter).
-- In game: `/revenge` opens the settings, `/revenge test` records a test kill by your target, and
+- In game: `/revenge` opens the settings (with the list of recent killers), `/revenge add First Last`
+  marks a player Wanted by you, `/revenge test` records a test kill by your target, and
   `/revenge test clear` removes those. `/revenge debug` toggles a debug log.
 
 - What it will do: [requirements](docs/plans/revenge/REQUIREMENTS.md)
