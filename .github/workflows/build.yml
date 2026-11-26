@@ -50,13 +50,26 @@ jobs:
         with:
           fetch-depth: 0 # the packager reads the version from the tags
 
+      # On a branch push, the packager skips a commit that already has a tag ("Found future
+      # tag ..., not packaging"), because the tag's own run builds it. Skip the check then too.
+      - name: See whether a tag's run builds this commit
+        id: tagged
+        run: |
+          tag=$(git tag --points-at HEAD)
+          if [[ $GITHUB_EVENT_NAME == push && $GITHUB_REF == refs/heads/* && -n $tag ]]; then
+            echo "This commit is tagged $tag, so that tag's run builds and checks the package."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Package without uploading
+        if: steps.tagged.outputs.skip != 'true'
         uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812 # v2.7.0
         with:
           args: -d
           pandoc: false
 
       - name: Check the package
+        if: steps.tagged.outputs.skip != 'true'
         run: python3 -I tools/check_package.py .release
 
   release:
