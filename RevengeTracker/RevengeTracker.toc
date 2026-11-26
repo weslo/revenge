@@ -1,0 +1,16 @@
+## Interface: 16001
+## Title: Revenge
+## Notes: Shows on an enemy's tooltip whether they recently killed you, a friend or a guildmate.
+## Version: 0.1.0-dev
+## SavedVariables: RevengeTrackerDB
+## X-Website: https://github.com/weslo/revenge
+
+Locales\enUS.lua
+Core.lua
+Store.lua
+Identity.lua
+Merge.lua
+Foreign.lua
+Deaths.lua
+Tooltip.lua
+Settings.lua
