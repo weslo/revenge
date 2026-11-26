@@ -1,10 +1,10 @@
 # Taking in other addons' data
 
-- Updated: 2026-11-25, Claude (planning)
+- Updated: 2026-11-26, Claude (built: S14 to S18 in one pull request, DEC-031; formats re-read from source the same day)
 - Decision: DEC-019 (user, in chat): "add an abstraction to the addon that supports messages from other popular addons (like RevengeBook) and deduplicates as best as possible. Let's plan the other-addon support first."
 - Isolation: DEC-020 (user, in chat): other addons are "low priority when it comes to performance and maintenance… if they error, can't be parsed, or cause problems, they should be silently disregarded and prevented from impacting performance or functionality. Users should be able to easily switch off other addon compatibility."
 - Requirements: REQ-024 to REQ-032 in [REQUIREMENTS.md](REQUIREMENTS.md); build rows IMP-013 to IMP-018 in [IMPLEMENTATION-MATRIX.md](IMPLEMENTATION-MATRIX.md)
-- Evidence: read-only source reviews of each addon, 2026-11-25, at the versions named below. Line references are to those clones and will drift as the addons update.
+- Evidence: read-only source reviews of each addon, first on 2026-11-25 and again on 2026-11-26 at the commits named below, read through the GitHub API without cloning or running anything. The formats are described here in our own words. Line references will drift as the addons update.
 
 ## Goal
 
@@ -160,68 +160,57 @@ Popularity is CurseForge downloads as of 2026-11-25.
 
 | Addon (downloads) | What reaches a listener on Forever | Plan |
 |---|---|---|
-| **Revenge Book** 1.6.4 (3.9k; you uninstalled it 2026-11-25, DEC-022) | Everything on GUILD, including answers to others' catch-up requests. Friends' whisper and Battle.net data needs Revenge to send a hello, but a user running both has it in `DeathNoteDB` | **Adapter candidate**: guild messages, plus saved data for users who run both |
+| **Revenge Book** 1.7.1 (3.9k; you uninstalled it 2026-11-25, DEC-022) | Everything on GUILD, including answers to others' catch-up requests. Friends' whisper and Battle.net data needs Revenge to send a hello, but a user running both has it in `DeathNoteDB` | **Adapter candidate**: guild messages, plus saved data for users who run both |
 | **Grudgekeeper** 1.13.1 (2.2k) | Everything on GUILD, plain `;` text; long messages are probably AceComm-chunked | **Adapter 2**: guild deaths, assists and kill orders |
-| **HeadHunter** 1.1.x (31k) | Its realm channel can't carry addon messages on Forever. Reports go by PARTY/RAID, or to random players by whisper | **Adapter 3**: party/raid and whispers from guildmates and friends, plus saved data while it's loaded |
-| **Kill on Sight** 4.0.1 Forever (67k) | Nothing: the Forever build removed its sync | **Adapter 4**: its KoS list, from saved data, as Wanted marks |
+| **HeadHunter** 1.1.x (31k) | Its realm channel can't carry addon messages on Forever. Reports go by PARTY/RAID, or by whisper ("gossip") to members of its channel's roster | **Adapter 3**: party/raid and whispers from guildmates and friends, plus saved data while it's loaded |
+| **Kill on Sight** 4.0.3 Forever (67k) | Nothing: the Forever build removed its sync | **Adapter 4**: its KoS list, from saved data, as Wanted marks |
 | **Wanted: Dead or... Dead** 1.29.6 (9.5k) | Mostly a faction-wide custom channel; LibSerialize and LibDeflate encoding; signed authority records | **Deferred** (REQ-031): joining its channel breaks rule 1, and decoding needs two bundled libraries |
 | **Spy (Forever)** (1.1M), **True Spy** (36k), **Spy Guild KOS Sync** (1.6k), **PlayerNotes & KoS** (4.2k) | Unknown: no public source | **Blocked** (Q-014). Spy itself shares sightings only, by its description |
 
-### 1. Revenge Book (`DeathNote`, prefix `DeathNote`)
+### 1. Revenge Book (`DeathNote`, prefix `DeathNote`), re-read at `01ef1c1` (v1.7.1)
 
-- **Format:**
-  - TAB-separated, at most 255 bytes, fields `%XX`-escaped.
-  - Field 1 is the protocol (`1`), field 2 the type.
-  - Each type has an exact field count, and some allow one optional extra. Reject anything else (`Sync.lua:496-511`).
-- **Used:**
-  - `K` (live kill on the sender) and `R` (the same in a catch-up answer): `key, display, class, level, zone, t, victim`.
-    - `key` is the killer, "First-Surname".
-    - `t` is the sender's clock, so its precision is `client`.
-    - `victim` is the sender, "First Surname" (`Sync.lua:2566-2587`).
-  - `L`: `key, t, victim, mapID, x, y`, with x and y in tenths of a percent. It attaches to the matching `K`/`R`.
-  - `M` (added by hand: Wanted by the sender): `key, display, class, level, t, by`.
-  - `X` (taken off: a Withdrawal): `key, by`.
-- **Ignored:** hit-list releases `J`/`A`, bounties `B`, avenged `V`/`E`, sightings `S`/`T`, help calls on `DeathNoteSOS`, hellos `H`.
-- **Saved data:**
-  - `DeathNoteDB` holds `enemies` with per-killer `deaths`, a `guild.lists[guildName]` book, and a `friends` book (`Store.lua:376-377`, `783-790`; `Sync.lua:733-742`).
-  - Imported read-only, time-sliced, after login and then at most every 10 minutes while Revenge Book is loaded. This is how friends' data that only reached your own Revenge Book gets in.
-  - Its internal event bus (`_G.DeathNote:On`) is not used, since it's undocumented and may change.
-- **Churn:** ten releases in two weeks. The protocol digit stays `1`, but types are added.
+- **Format:** TAB-separated, at most 255 bytes, at most 10 fields. Field 1 is the protocol `1`, field 2 the type, and each type has an exact field count (K and R 9, L and M 8, X 4). Control bytes, `%` and `|` are escaped as `%XX`. Numbers are plain decimal. Times are the sender's own clock (`time()`), so their precision is `client`.
+- **Names:** a killer's key is "First-Surname". When the sender didn't know the surname, the key's second part is a realm (or `?`) and the display name is the first name alone; Revenge then keeps the first name only. Victims and adders are "First Surname".
+- **Used:** `K` (a live death of the sender) and `R` (the same in a catch-up answer): key, display, class, level, zone, t, victim. `L`: key, t, victim, mapID, x, y (tenths of a percent), merging into its death. `M` (marked Wanted by hand by the sender): key, display, class, level, t, by. `X` (that mark taken back; it has no time, so it counts from arrival): key, by.
+- **Who:** the victim of K, R and L, and the adder of M and X, is always the sender; nothing is relayed. Revenge checks this again.
+- **Channels:** only the guild channel reaches a listener. Friends' whispers and Battle.net data need Revenge Book's own hello, so they reach you only through your own Revenge Book's saved data.
+- **Ignored:** hit lists (J/A), bounties (B, C, Q, Y), avenged kills (V/E), sightings, hellos and the rest.
+- **Saved data** (`DeathNoteDB`, read while Revenge Book is loaded): your own book (`enemies[key].deaths`, sure kills only, not assists or imports), your current guild's book (`guild.lists[guild].enemies[key].deeds`), the friends' book (`friends.enemies[key].deeds`), your own hand-made Wanted entries, and the marks guildmates and friends sent (`listedBy`). Deaths older than 30 days are skipped.
 
-### 2. Grudgekeeper (prefix `Grudgekeeper`, GUILD only)
+### 2. Grudgekeeper (prefix `Grudgekeeper`, guild only), re-read at `ba6a723` (v1.13.1)
 
-- **Format:**
-  - `;`-separated: type, protocol `1`, then fields; new fields are only added at the end.
-  - Transport is LibForever-1.0 over AceComm. Messages over 255 bytes are probably split with `\001`/`\002`/`\003` lead bytes, so the adapter reassembles them. This is unverified, because that library wasn't in the clone.
-- **Used:**
-  - `D` (the sender died): `killer, class, race, level, zone, …, enemyGuild` (`Guild.lua:1436`). It has no timestamp, so precision is `received`.
-  - `C` (kill order): `id, target, class, race, level, guid, reward, created, expires, state, doneBy, note, …` (`Guild.lua:745`).
-    - State `o` (open) is "Wanted by the poster".
-    - Any other state is a Withdrawal.
-  - `O` relays a `C` and is never trusted over a live `C`.
-- **Ignored:** `K`/`H` (the sender's own kills and assists), points, notes, sightings, pots and profiles.
-- **Saved data:** `GrudgekeeperDB` exists, but not used at first, since guild messages already cover it.
-- **Churn:** very high. Fields were added without changing the protocol digit, so parse by position and tolerate extra trailing fields.
+- **Format:** `;`-separated: type, protocol `1`, then fields; new fields only ever go on the end. No escaping: Grudgekeeper turns `;` into `,` before sending. Transport is LibForever-1.0, a pass-through to AceComm-3.0, which splits messages over 255 bytes: byte 1 marks the first part, byte 2 a middle part, byte 3 the last, per sender; byte 4 escapes a message that starts with a control byte. Revenge joins the parts.
+- **Names:** "First Last"; an older client may send "Name-Realm", whose realm Revenge drops.
+- **Used:** `D` (the sender just died): killer, class, race, level, zone, times, raceFile, sex, guild. No time, so `received`. `G` of kind `D` (one of the sender's own earlier deaths, in a catch-up answer): killer, class, race, level, zone, t, guild, times. `C` (the sender's own kill order, as it stands): id, target, class, race, level, guid, reward, created, expires, state, doneBy, note, auto, raceFile, sex. State `o` (open, until `expires`) is "Wanted by" the poster; `d`, `p`, `x` and `e` (fulfilled, paid, withdrawn, expired) end it.
+- **Ignored:** `O` (someone else relaying an order), `F` (a hunter claiming someone else's order), `G` of kind `K`, the sender's own kills and assists, points, notes, sightings and profiles.
+- **Saved data:** not read; the guild messages carry it all.
 
-### 3. HeadHunter (prefix `HeadHunter`)
+### 3. HeadHunter (prefix `HeadHunter`), re-read at `33130c0` (after v1.1.1)
 
-- **Format:**
-  - The message starts with `"1"`, then the faction `A`/`H`, a type letter and `:`.
-  - Records are separated by `~`, fields by `;`, sub-fields by `,`. Numbers and coordinates are base 36.
-  - Gossip wraps records in an `E` envelope.
-- **Used:** `D` death reports: `t;victimKey;level;class;race;mapID;x;y;confidence;layer;killer[;assists]`.
-  - Each killer is `key,incomplete,level,class,race,sex,guid`, and `t` is server time (`Protocol.lua:213-293`).
-  - Taken from PARTY/RAID and from whispers, including `E` envelopes, only when the sender or the envelope's author is the victim and a guildmate or friend.
-- **Ignored:** HeadHunter's realm-wide channel and its strangers (Q-012); WANTED is computed locally by HeadHunter and never sent.
-- **Saved data:** `HeadHunter_DB` is read while loaded. On Forever it isn't loaded back after a reload, so the importer reads it in-session only.
-- **Value:** lower than its downloads suggest, since only groupmates and occasional whispers reach a listener.
+- **Format:** `1`, the sender's faction `A`/`H`, a type letter, `:`, then records joined by `~` (one type per message). Fields `;`, sub-fields `,`. Numbers in lower-case base 36. No splitting, compression or escaping.
+- **Used:** `D`: t, victim, level, class, race, mapID, x, y (thousandths), confidence (`e`, `i`, or `s` for a simulated test death, which is skipped), layer, killer, up to 4 assists, and an optional `h<helpers>`. Each enemy is name, incomplete (`1`: first name only, with the full GUID), level (`s` for a skull), class, race, sex, guid. Class and race are one-letter codes. t is the death recap's time; Revenge treats it as `client`.
+- **Channels:** HeadHunter tries its own `HeadHunterSync` channel first, which the Forever server refuses (Revenge never joins it). A plain `D` goes to PARTY or RAID; whispers carry `E` envelopes (world, author, faction, server, hops, at, then the record).
+- **Taken:** a plain `D` by party or raid, and an `E` at hop 1 whose author is the sender, when the sender is a guildmate or friend. **Ignored:** envelopes at hop 2 and up, bridged envelopes on group channels, catch-up data, and everything that isn't a death on your side.
+- **Saved data** (`HeadHunter_DB`, while HeadHunter is loaded): your own deaths (`homes[meta.home].deaths`, origin `local`), the newest 200. Its received reports aren't read, since they include strangers'.
 
-### 4. Kill on Sight (Forever build; no messages)
+### 4. Kill on Sight (folder `KillOnSight`; no messages), re-read at `8ec0efb` (v4.0.3 Forever)
 
-- **Saved data:**
-  - `KillOnSightDB.global.data.players[key]` holds `{name, class, reason, addedBy, addedAt, …}`. These become WantedMarks: "Wanted by" `addedBy`, which is usually you.
-  - Check for both `KillOnSight` and `KillOnSight-forever` as folder names.
-  - The record type is a localized string, so check for "player" entries by structure, not by that string.
+- **Saved data:** `KillOnSightDB.global.data.players["first last"] = { name, class, reason, addedBy, addedAt, ... }`, a hand-rolled layout (not AceDB). Everything in `players` is kill on sight; the "Honoured" list (`honorPlayers`), the encounter stats, the backup and the old per-realm copies aren't read.
+- **Marks:** "Wanted by" you, or by `addedBy` when an old sync left a guildmate's full name there. `addedAt` is the local clock. Names typed with `/kos add` are lower case and get capitals. Old entries with a first name only are skipped: Kill on Sight never alerts on them either.
+- **Removals:** removing a player deletes the entry, so after reading the whole list Revenge drops the marks only Kill on Sight gave for players no longer on it.
+- **Folder:** CurseForge installs it as `KillOnSight`; Revenge checks `KillOnSight-forever` too.
+
+## As built (2026-11-26)
+
+- **Files:** the module is `RevengeTracker_OtherAddons/` (`Breaker.lua`, `Queue.lua`, `Host.lua`, `Adapters/*.lua`), shipped in the same zip, load-on-demand and depending on Revenge. The core's side is `Foreign.lua` (the door, trust, loading the module, status) and `OthersPanel.lua` (the status lines).
+- **The door** takes kills, Wanted marks and withdrawals. A message's sender must be a guildmate on the guild channel, an online friend (in-game or Battle.net), or a guildmate or friend in your group, and it must be about their own death or mark. Your own copy of another addon's saved data is exempt from both checks.
+- **Never passed on:** Revenge's own catch-up answers carry only what Revenge itself recorded, and removing another addon's mark doesn't send a withdrawal.
+- **Hidden at once** when the master switch goes off: kills and marks no Revenge user reported. Caps: 1,000 such kills and 500 such marks in storage (the oldest go at login), 3,000 records a session, 50 per call.
+- **Budget:** a 200-message queue, at most 0.5 ms a frame, nothing in combat, at most 20 records a second into the merge; one call over 2 ms is an overrun. Per sender, at most 120 messages per adapter in 10 minutes. Imports run 20 seconds after the module loads and then every 10 minutes, one adapter at a time, at most 500 records a run, skipping what this session already handed over.
+- **Breakers:** 5 errors, more than 25 of the last 50 messages failing to parse, or 3 overruns pause an adapter for the session. A saved-data structure it doesn't recognise stops that import for the session without counting as an error.
+- **Lapsing marks:** a mark can carry `expires` (Grudgekeeper's open orders); it stops showing then and is pruned at the next login. Revenge's own marks never lapse.
+- **Alerts:** a death from another addon that arrives live (Revenge Book's `K`, Grudgekeeper's `D`, HeadHunter's `D` within 5 minutes) alerts like a guildmate's own.
+- **Tests:** `tests/test_others.lua` (the framework, with throwing, junk-flooding and slow fake adapters) and `tests/test_adapters.lua` (each format, built from the descriptions above).
 
 ## Order and effort
 
@@ -230,11 +219,10 @@ Other addons are low priority (DEC-020), so they come after everything else:
 1. **The core source layer** (IMP-013): records, name cache, trust and merge, with Revenge's own deaths flowing through it, and the `SubmitForeign` door with its validation. This is core, so it's built early, right after recording.
 2. **All core features and Revenge's first release**, with no other-addon code in it.
 3. **The optional module** (IMP-018): load-on-demand folder, master switch, queue and time budget, circuit breakers, status lines. It's tested with deliberately broken fake adapters before any real one.
-4. **The first adapter:** Revenge Book (IMP-014) if guildmates use it, otherwise Grudgekeeper (IMP-015). You no longer run Revenge Book (DEC-022), so this is decided when S18 starts (Q-015).
-5. The rest in order: **Grudgekeeper** or **Revenge Book**, then **HeadHunter** (IMP-016), then **Kill on Sight** (IMP-017). Each one is built only if the one before proved worth it.
+4. **The adapters:** planned one at a time, each only if the one before proved worth it. Built instead all together with the module in one pull request, to be tried in game over time (DEC-031, which settles Q-015).
 6. **Wanted: Dead or... Dead:** only if asked, and then only its guild kill-on-sight list (`WNTDK`), which needs the two libraries.
 
-Testing each adapter needs sample messages, built from the formats above and kept as fixtures. They're decoded offline under a Lua 5.1 interpreter (not yet installed), then checked in game with a guildmate or friend running that addon.
+Each adapter's sample messages are built from the formats above and decoded offline under Lua 5.1 (`tests/test_adapters.lua`). The in-game check needs a guildmate or friend running that addon.
 
 ## Open questions
 
