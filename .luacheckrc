@@ -4,7 +4,7 @@
 std = "lua51"
 max_line_length = false
 self = false  -- module methods like Module:OnLogin() needn't use self
-exclude_files = { ".luacheckrc", "tools/**", "docs/**", "tests/**", ".venv/**" }
+exclude_files = { ".luacheckrc", "tools/**", "docs/**", "tests/**", ".venv/**", ".release/**" }
 
 -- Globals Revenge defines.
 globals = {

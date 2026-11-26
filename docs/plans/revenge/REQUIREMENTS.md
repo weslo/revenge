@@ -1,7 +1,7 @@
 # Revenge requirements
 
 - Project/repository: `C:\Users\wesle\Documents\GitHub\revenge` (GitHub `weslo/revenge`, public; work is tracked in its Issues, DEC-026)
-- Updated: 2026-11-25, by Claude (V-005 passed; DEC-026, Issues and pull requests)
+- Updated: 2026-11-26, by Claude (DEC-027, release packaging)
 - Implementation matrix: [IMPLEMENTATION-MATRIX.md](IMPLEMENTATION-MATRIX.md)
 - Original request: on a PvP realm, "when hovering an enemy on the opposing faction, [see] whether they've killed you or your friends or guildies recently, so you can get vengeance." Revenge Book does this but "the book interface etc is a little over complicated."
 - Goal: a lightweight World of Warcraft: Forever addon that marks enemy players who recently killed you, a friend or a guildmate, mainly through their tooltip, with a few optional extras and plain settings.
@@ -145,6 +145,7 @@
 | DEC-024 / 2026-11-25 | Implementation (S04) | Remove on the list takes that player out of every stored kill they're in; other killers in the same kill stay. A tombstone keeps them out of re-reports of those deaths, while new deaths still count. Dismiss kill on a map pin (REQ-020, S10) removes the whole kill instead | 011, 020, 025 | none |
 | DEC-025 / 2026-11-25 | Implementation (S04) | Add by name takes letters (any language), spaces, hyphens and apostrophes only, so no chat codes or links get in. It needs first and last name where the game uses surnames (a first name alone could match many players), refuses your own name and, when the name cache knows them, a player of your own faction. A name seen before takes the game's spelling, GUID, class and level; one not seen yet gets them the first time it's seen | 011, 021 | none |
 | DEC-026 / 2026-11-25 | User, in chat | Work goes through GitHub: one Issue per increment (#1 for the work so far), a feature branch per Issue, commits pushed at clear deliverable steps, and a pull request against its Issue for the user to review. The user merges | all | Issues #1 to #15 created; the matrix's build order maps them to slices |
+| DEC-027 / 2026-11-26 | Implementation (S11) | The repo keeps the addon in `RevengeTracker/`. The BigWigs packager (v2.7.0, pinned by commit) packages as `Revenge`, moves `RevengeTracker/` to the top of the zip and ignores everything else, so the zip holds only the addon folder. The release notes are the hand-written `CHANGELOG.md`, because a generated one would ship in a stray folder. The same workflow runs the checks and a no-upload package build on every pull request, so packaging mistakes show before a tag | 016 | V-012 |
 | DEC-020 / 2026-11-25 | User, in chat | Other addons are low priority for performance and maintenance. Failures are silently disregarded and can't affect performance or functionality, and there's an easy off switch | 024, 026–030, 032 | Optional load-on-demand module; adapters built after the core and its first release; REQ-032 added |
 
 ## Completion criteria

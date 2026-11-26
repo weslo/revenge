@@ -1,0 +1,82 @@
+# Checks every pull request and every push to main, and publishes a GitHub release when a
+# version tag (for example v0.1.0) is pushed.
+#
+# The release holds the addon zip and release.json. release.json names the zip as the
+# Forever build, which is how `instawow install github:weslo/revenge` finds it.
+# Actions are pinned to commits; the comment beside each gives its version.
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Static checks and offline tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: luacheck
+        uses: lunarmodules/luacheck@cc089e3f65acdd1ef8716cc73a3eca24a6b845e4 # v1.2.0
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Lua 5.1 syntax scan
+        run: python -I tools/check_lua51.py
+
+      - name: Offline tests (Lua 5.1 through lupa)
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --quiet lupa==2.8
+          .venv/bin/python -I tests/run.py
+
+      - name: Package checker tests
+        run: python -I -m unittest discover -s tools -p "test_*.py"
+
+  package:
+    name: Build the package
+    needs: checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the packager reads the version from the tags
+
+      - name: Package without uploading
+        uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812 # v2.7.0
+        with:
+          args: -d
+          pandoc: false
+
+      - name: Check the package
+        run: python3 -I tools/check_package.py .release
+
+  release:
+    name: Publish the release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # to create the release and upload its files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Package and upload to GitHub
+        uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812 # v2.7.0
+        with:
+          pandoc: false
+        env:
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check what was published
+        run: python3 -I tools/check_package.py --release-json .release

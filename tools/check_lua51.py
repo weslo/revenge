@@ -74,7 +74,7 @@ def strip(source: str) -> str:
 def main() -> int:
     root = Path(__file__).resolve().parent.parent
     paths = [Path(p) for p in sys.argv[1:]] or [
-        p for p in root.rglob('*.lua') if not {'docs', 'tools', '.venv'} & set(p.relative_to(root).parts)
+        p for p in root.rglob('*.lua') if not {'docs', 'tools', '.venv', '.release'} & set(p.relative_to(root).parts)
     ]
     problems = 0
     for path in paths:
