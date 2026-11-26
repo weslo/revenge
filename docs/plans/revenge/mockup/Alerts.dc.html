@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Revenge alerts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8fb8ff}a:hover{color:#b8d2ff}
+</style>
+</helmet>
+<div style="width: 880px; height: 620px; box-sizing: border-box; padding: 40px 48px; background: #15181c; font-family: Inter, system-ui, sans-serif; color: #e6e9ed; display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #f2f4f6">Optional alerts: a small popup, and chat</h1>
+    <p style="margin: 0; font-size: 14px; color: #a3acb6">Both on by default, and each can be switched off. Ordinary chat lines are shown for context.</p>
+  </div>
+  <div style="box-sizing: border-box; height: 170px; background: #222a31; border: 1px solid #2f3842; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px">
+    <div style="font-size: 12px; color: #a3acb6; align-self: flex-start">Top of the screen (stand-in for the game world)</div>
+    <div style="box-sizing: border-box; width: 320px; background: #0a0c12; border: 1px solid #565c68; border-radius: 6px; padding: 7px 12px; display: flex; align-items: center; gap: 10px; font-family: &#39;Alegreya Sans&#39;, sans-serif; font-size: 15px; line-height: 1.3">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink: 0"><path d="M8 1.5c-3.3 0-5.5 2.3-5.5 5.2 0 1.8.9 3.1 2 3.9v2.4h1.8v-1.5h1.4v1.5h1.6v-1.5h1.4v1.5h1.8v-2.4c1.1-.8 2-2.1 2-3.9 0-2.9-2.2-5.2-5.5-5.2z" fill="#ff8c6e"></path><circle cx="5.8" cy="7" r="1.3" fill="#0a0c12"></circle><circle cx="10.2" cy="7" r="1.3" fill="#0a0c12"></circle></svg>
+      <div style="display: flex; flex-direction: column"><span style="font-weight: 700; color: #ff8c6e">Gorvak Ashmane is nearby</span><span style="color: #c9ced6">(5) You, Mira, Tavish, +1 more</span></div>
+    </div>
+    <div style="box-sizing: border-box; width: 320px; background: #0a0c12; border: 1px solid #565c68; border-radius: 6px; padding: 7px 12px; display: flex; align-items: center; gap: 10px; font-family: &#39;Alegreya Sans&#39;, sans-serif; font-size: 15px; line-height: 1.3; opacity: 0.6">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink: 0"><path d="M8 1.5c-3.3 0-5.5 2.3-5.5 5.2 0 1.8.9 3.1 2 3.9v2.4h1.8v-1.5h1.4v1.5h1.6v-1.5h1.4v1.5h1.8v-2.4c1.1-.8 2-2.1 2-3.9 0-2.9-2.2-5.2-5.5-5.2z" fill="#ffc8a8"></path><circle cx="5.8" cy="7" r="1.3" fill="#0a0c12"></circle><circle cx="10.2" cy="7" r="1.3" fill="#0a0c12"></circle></svg>
+      <div style="display: flex; flex-direction: column"><span style="font-weight: 700; color: #ffc8a8">Mira Thornwood (friend) was killed</span><span style="color: #c9ced6">by Velka Duskmantle · Duskwood</span></div>
+    </div>
+  </div>
+  <div style="box-sizing: border-box; background: #0b0d10; border: 1px solid #262b32; border-radius: 4px; padding: 12px 14px; font-family: &#39;Alegreya Sans&#39;, sans-serif; font-size: 16px; line-height: 1.5; display: flex; flex-direction: column; gap: 2px">
+    <div style="color: #6fd96f">[Guild] Tavish Brightforge: anyone near Southshore?</div>
+    <div style="display: flex; align-items: center; gap: 8px; color: #ff8c6e">
+      <span>[Revenge] Gorvak Ashmane is nearby: (5) You, Mira, Tavish, +1 more.</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" role="img" aria-label="plays a sound"><path d="M2.5 6h2.5l3.5-3v10l-3.5-3H2.5z" fill="none" stroke="#ff8c6e" stroke-width="1.4" stroke-linejoin="round"></path><path d="M11 5.5c.9.7 1.4 1.6 1.4 2.5s-.5 1.8-1.4 2.5" fill="none" stroke="#ff8c6e" stroke-width="1.4" stroke-linecap="round"></path></svg>
+    </div>
+    <div style="color: #ff8c6e">[Revenge] Darrok Vane is nearby: Wanted by Mira.</div>
+    <div style="color: #ffc8a8">[Revenge] Mira Thornwood (friend) was killed by Velka Duskmantle in Duskwood.</div>
+    <div style="color: #e6e9ed">[1. General] Pellam Oakes: LF healer for the Stockade</div>
+    <div style="color: #ffc8a8">[Revenge] Tavish Brightforge (guild) was killed by Ruskar Redtusk in Stranglethorn Vale.</div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; font-size: 13px; line-height: 1.5; color: #a3acb6">
+    <div><span style="color: #e6e9ed; font-weight: 600">Popup</span>: small, near the top of the screen. Silent, no screen-wide effects. Fades after about 4 seconds, or at once when clicked (the second one is fading).</div>
+    <div><span style="color: #ff8c6e; font-weight: 600">Killer nearby</span>: when a recent killer or a wanted player shows up on a nameplate, your target or under the mouse. At most once every 5 minutes per player. The sound is for chat only and can be switched off.</div>
+    <div><span style="color: #ffc8a8; font-weight: 600">Friend or guildmate killed</span>: as soon as their death is shared, wherever it happened in the open world. Once per death.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":880,"height":620}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
