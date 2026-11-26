@@ -59,7 +59,7 @@ function count(t)
     return n
 end
 
-for _, file in ipairs({ "test_identity", "test_merge", "test_foreign", "test_deaths", "test_tooltip", "test_store", "test_wanted", "test_list", "test_share" }) do
+for _, file in ipairs({ "test_identity", "test_merge", "test_foreign", "test_deaths", "test_tooltip", "test_store", "test_wanted", "test_list", "test_share", "test_alerts", "test_friends", "test_markers" }) do
     dofile(ROOT .. "/tests/" .. file .. ".lua")
 end
 

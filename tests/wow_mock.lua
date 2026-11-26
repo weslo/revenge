@@ -93,6 +93,13 @@ function W:GetScript(name) return self.scripts[name] end
 function W:SetText(text) self.text = text end
 function W:GetText() return self.text or "" end
 function W:SetTextColor(r, g, b) self.color = { r, g, b } end
+function W:SetVertexColor(r, g, b) self.color = { r, g, b } end
+function W:SetAlpha(alpha) self.alpha = alpha end
+function W:GetAlpha() return self.alpha or 1 end
+function W:SetTexture(texture) self.texture = texture end
+function W:SetParent(parent) self.parent = parent end
+function W:SetPoint(...) self.points = self.points or {} table.insert(self.points, { ... }) end
+function W:ClearAllPoints() self.points = {} end
 function W:Show() self.shown = true end
 function W:Hide() self.shown = false end
 function W:SetShown(shown) self.shown = not not shown end
@@ -117,6 +124,8 @@ end
 function CreateFrame(kind, _, parent, template)
     return NewWidget(kind or "Frame", parent, template)
 end
+UIParent = NewWidget("Frame")
+function PlaySound(sound, channel) table.insert(Mock.sounds, { sound = sound, channel = channel }) end
 
 function CreateScrollBoxListLinearView()
     local view = {}
@@ -162,6 +171,71 @@ function Mock.Deliver(text, sender, channel, prefix)
     Mock.Fire("CHAT_MSG_ADDON", prefix or "RVNG1", text, channel or "GUILD", sender, "", 0, 0, "", 0)
 end
 
+-- Battle.net game data from a friend's game account.
+function Mock.DeliverBN(text, gameAccountID, prefix)
+    Mock.Fire("BN_CHAT_MSG_ADDON", prefix or "RVNG1", text, "WHISPER", gameAccountID)
+end
+
+---------------------------------------------------------------------------
+-- The world map: data providers draw pins into Mock.pins.
+---------------------------------------------------------------------------
+function CreateFromMixins(...)
+    local t = {}
+    for _, mixin in ipairs({ ... }) do for k, v in pairs(mixin) do t[k] = v end end
+    return t
+end
+function Mixin(object, ...)
+    for _, mixin in ipairs({ ... }) do for k, v in pairs(mixin) do object[k] = v end end
+    return object
+end
+MapCanvasDataProviderMixin = {
+    OnAdded = function(self, map) self.owningMap = map end,
+    GetMap = function(self) return self.owningMap end,
+    RemoveAllData = function() end,
+    RefreshAllData = function() end,
+}
+MapCanvasPinMixin = {
+    SetScalingLimits = function() end,
+    UseFrameLevelType = function() end,
+    SetPosition = function(self, x, y) self.x, self.y = x, y end,
+    ShouldMouseButtonBePassthrough = function(_, button) return button == "RightButton" end,
+}
+WorldMapFrame = NewWidget("Frame")
+WorldMapFrame.AddDataProvider = function(self, provider)
+    table.insert(Mock.mapProviders, provider)
+    provider:OnAdded(self)
+end
+WorldMapFrame.GetMapID = function() return Mock.shownMap end
+WorldMapFrame.AcquirePin = function(self, template, ...)
+    local pin = NewWidget("Frame", self, template)
+    Mixin(pin, RevengeTrackerKillPinMixin)
+    pin.Icon = NewWidget("Texture", pin)
+    pin.owningMap = self
+    pin:OnLoad()
+    pin:OnAcquired(...)
+    table.insert(Mock.pins, pin)
+    return pin
+end
+WorldMapFrame.RemoveAllPinsByTemplate = function() Mock.pins = {} end
+
+-- Shows the world map at mapID, as the game would: the providers redraw.
+function Mock.ShowMap(mapID)
+    Mock.shownMap = mapID
+    WorldMapFrame.shown = true
+    for _, provider in ipairs(Mock.mapProviders) do provider:RefreshAllData() end
+    return Mock.pins
+end
+
+MenuUtil = {
+    CreateContextMenu = function(owner, generator)
+        local root = { items = {} }
+        function root:CreateTitle(text) table.insert(self.items, { title = text }) end
+        function root:CreateButton(text, fn) table.insert(self.items, { text = text, fn = fn }) end
+        generator(owner, root)
+        Mock.menu = root.items
+    end,
+}
+
 ---------------------------------------------------------------------------
 -- Units: Mock.units[token] = { name, surname, guid, class, level, guild, faction }
 ---------------------------------------------------------------------------
@@ -194,7 +268,39 @@ end
 function IsGuildMember(guid) return Mock.guild[guid] == true end
 function IsInGuild() return Mock.inGuild end
 function Ambiguate(name) return name end
-C_FriendList = { IsFriend = function(guid) return Mock.friends[guid] == true end }
+-- Friends: Mock.friendList = { { name, connected, guid } }; Mock.bnFriends = { gameAccountInfo tables }.
+C_FriendList = {
+    IsFriend = function(guid) return Mock.friends[guid] == true end,
+    ShowFriends = function() end,
+    GetNumFriends = function() return #Mock.friendList end,
+    GetFriendInfoByIndex = function(i) return Mock.friendList[i] end,
+}
+BNET_CLIENT_WOW = "WoW"
+WOW_PROJECT_ID = 18
+function BNGetNumFriends() return #Mock.bnFriends end
+C_BattleNet = {
+    GetFriendAccountInfo = function(i)
+        local game = Mock.bnFriends[i]
+        if game then return { gameAccountInfo = game } end
+    end,
+    GetGameAccountInfoByID = function(id)
+        for _, game in ipairs(Mock.bnFriends) do if game.gameAccountID == id then return game end end
+    end,
+    GetGameAccountInfoByGUID = function(guid)
+        for _, game in ipairs(Mock.bnFriends) do if game.playerGuid == guid then return game end end
+    end,
+}
+function BNSendGameData(id, prefix, text)
+    local result = table.remove(Mock.sendResults, 1)
+    if result == nil or result == 0 then
+        table.insert(Mock.sent, { prefix = prefix, text = text, channel = "BN", target = id })
+    end
+    return result
+end
+
+-- Nameplates: Mock.plates[unit] is the base plate frame.
+C_NamePlate = { GetNamePlateForUnit = function(unit) return Mock.plates[unit] end }
+SOUNDKIT = { MAP_PING = 3175 }
 
 ---------------------------------------------------------------------------
 -- World
@@ -204,6 +310,10 @@ function GetRealZoneText() return Mock.zone end
 function InCombatLockdown() return Mock.inCombat end
 C_Map = {
     GetBestMapForUnit = function() return Mock.mapID end,
+    GetMapRectOnMap = function(from, to)
+        local rect = Mock.mapRects[from .. ">" .. to]
+        if rect then return rect[1], rect[2], rect[3], rect[4] end
+    end,
     GetMapInfo = function(mapID)
         local name = Mock.maps[mapID]
         if name then return { mapID = mapID, name = name } end
@@ -247,6 +357,9 @@ GameTooltip = {
     shown = false,
     AddLine = function(self, text) table.insert(self.lines, text) end,
     GetUnit = function(self) return "name", self.unit end,
+    SetOwner = function(self, owner) self.owner = owner end,
+    Show = function(self) self.shown = true end,
+    Hide = function(self) self.shown = false end,
     IsShown = function(self) return self.shown end,
     RefreshData = function(self) Mock.Hover(self.unit) end,
 }
@@ -343,6 +456,10 @@ function Mock.Reset()
     Mock.valueCallbacks = {}
     Mock.uniqueNames = true
     Mock.sent, Mock.sendResults, Mock.prefixes = {}, {}, {}
+    Mock.sounds = {}
+    Mock.friendList, Mock.bnFriends, Mock.plates = {}, {}, {}
+    Mock.pins, Mock.mapProviders, Mock.shownMap, Mock.menu, Mock.mapRects = {}, {}, nil, nil, {}
+    WorldMapFrame.shown = false
     Mock.inGuild, Mock.inCombat, Mock.chatLockdown = true, false, false
     Mock.maps = { [1431] = "Duskwood", [1433] = "Redridge Mountains" }
     GameTooltip.lines, GameTooltip.unit, GameTooltip.shown = {}, nil, false

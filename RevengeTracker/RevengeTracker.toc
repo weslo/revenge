@@ -15,7 +15,12 @@ Foreign.lua
 Deaths.lua
 Tooltip.lua
 List.lua
+Friends.lua
 Share.lua
+Popup.lua
+Alerts.lua
+Nameplates.lua
+MapPins.lua
 Templates.xml
 ListPanel.lua
 Settings.lua

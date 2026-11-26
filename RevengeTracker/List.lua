@@ -30,6 +30,8 @@ local function WhoText(identity)
     return L.WHO_UNSEEN
 end
 
+List.WhoText = WhoText
+
 -- Rows, newest activity first: { identity, kills = {...}, marks = {...}, latest = time }
 function List.Rows(now)
     now = now or ns.Now()
