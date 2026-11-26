@@ -159,7 +159,7 @@ end)
 ---------------------------------------------------------------------------
 local function ShowHelp()
     ns.Print(L.HELP_HEADER)
-    for _, line in ipairs({ L.HELP_OPEN, L.HELP_ADD, L.HELP_TEST, L.HELP_TEST_CLEAR, L.HELP_DEBUG }) do
+    for _, line in ipairs({ L.HELP_OPEN, L.HELP_ADD, L.HELP_TEST, L.HELP_TEST_SHARE, L.HELP_TEST_CLEAR, L.HELP_DEBUG }) do
         DEFAULT_CHAT_FRAME:AddMessage("  " .. line)
     end
 end
@@ -174,6 +174,11 @@ function commands.test(rest)
     local killer = ns.Identity.FromUnit("target")
     if not killer or not ns.Try(UnitIsPlayer, "target") then
         ns.Print(L.TEST_NEED_PLAYER)
+        return
+    end
+    if rest == "share" then
+        local sent = ns.Deaths.RecordTestKill(killer, true)
+        ns.Print(sent > 0 and L.TEST_ADDED_SHARED or L.TEST_ADDED_NOT_SHARED, killer.name)
         return
     end
     ns.Deaths.RecordTestKill(killer)

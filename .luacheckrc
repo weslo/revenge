@@ -17,7 +17,7 @@ globals = {
 -- Game API Revenge reads.
 read_globals = {
     "bit", "wipe",
-    "C_AddOns", "C_Timer", "C_Map", "C_DeathRecap", "C_FriendList",
+    "C_AddOns", "C_Timer", "C_Map", "C_DeathRecap", "C_FriendList", "C_ChatInfo",
     "CreateFrame", "DEFAULT_CHAT_FRAME", "GameTooltip", "TooltipDataProcessor", "Enum",
     "Settings", "MinimalSliderWithSteppersMixin", "CreateSettingsListSectionHeaderInitializer",
     "CreateScrollBoxListLinearView", "CreateDataProvider", "ScrollUtil", "ScrollBoxConstants",
@@ -26,4 +26,5 @@ read_globals = {
     "UnitFullName", "GetUnitName", "RegionalUniqueNamesEnabled", "UnitIsPlayer", "UnitGUID",
     "UnitClass", "UnitLevel", "UnitFactionGroup", "GetGuildInfo", "GetPlayerInfoByGUID", "IsGuildMember",
     "IsShiftKeyDown", "IsControlKeyDown", "IsAltKeyDown",
+    "GetTime", "IsInGuild", "Ambiguate",
 }

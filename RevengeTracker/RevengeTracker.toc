@@ -10,10 +10,12 @@ Core.lua
 Store.lua
 Identity.lua
 Merge.lua
+Protocol.lua
 Foreign.lua
 Deaths.lua
 Tooltip.lua
 List.lua
+Share.lua
 Templates.xml
 ListPanel.lua
 Settings.lua

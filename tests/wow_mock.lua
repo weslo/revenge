@@ -35,6 +35,7 @@ function issecretvalue(v) return v == SECRET end
 -- Clock, timers, events
 ---------------------------------------------------------------------------
 function GetServerTime() return Mock.now end
+function GetTime() return Mock.clock end
 
 C_Timer = {
     After = function(delay, fn)
@@ -142,6 +143,25 @@ DEFAULT_CHAT_FRAME = {
     AddMessage = function(_, text) table.insert(Mock.chat, text) end,
 }
 
+-- Addon messages: what Revenge sends lands in Mock.sent. Mock.sendResults holds the
+-- results the game gives the next sends (0, success, when empty).
+C_ChatInfo = {
+    RegisterAddonMessagePrefix = function(prefix) Mock.prefixes[prefix] = true return 0 end,
+    SendAddonMessage = function(prefix, text, channel, target)
+        local result = table.remove(Mock.sendResults, 1) or 0
+        if result == 0 then
+            table.insert(Mock.sent, { prefix = prefix, text = text, channel = channel, target = target })
+        end
+        return result
+    end,
+    InChatMessagingLockdown = function() return Mock.chatLockdown end,
+}
+
+-- A message arriving as the game would deliver it (default: on the guild channel).
+function Mock.Deliver(text, sender, channel, prefix)
+    Mock.Fire("CHAT_MSG_ADDON", prefix or "RVNG1", text, channel or "GUILD", sender, "", 0, 0, "", 0)
+end
+
 ---------------------------------------------------------------------------
 -- Units: Mock.units[token] = { name, surname, guid, class, level, guild, faction }
 ---------------------------------------------------------------------------
@@ -172,6 +192,8 @@ function GetPlayerInfoByGUID(guid)
     if p then return p.class, p.class, "Race", "RACE", 2, p.name, "Realm", p.level end
 end
 function IsGuildMember(guid) return Mock.guild[guid] == true end
+function IsInGuild() return Mock.inGuild end
+function Ambiguate(name) return name end
 C_FriendList = { IsFriend = function(guid) return Mock.friends[guid] == true end }
 
 ---------------------------------------------------------------------------
@@ -179,9 +201,13 @@ C_FriendList = { IsFriend = function(guid) return Mock.friends[guid] == true end
 ---------------------------------------------------------------------------
 function IsInInstance() return Mock.inInstance, Mock.inInstance and "party" or "none" end
 function GetRealZoneText() return Mock.zone end
-function InCombatLockdown() return false end
+function InCombatLockdown() return Mock.inCombat end
 C_Map = {
     GetBestMapForUnit = function() return Mock.mapID end,
+    GetMapInfo = function(mapID)
+        local name = Mock.maps[mapID]
+        if name then return { mapID = mapID, name = name } end
+    end,
     GetPlayerMapPosition = function()
         if not Mock.position then return nil end
         local p = { x = Mock.position[1], y = Mock.position[2] }
@@ -202,7 +228,12 @@ function IsShiftKeyDown() return Mock.keys.shift end
 function IsControlKeyDown() return Mock.keys.ctrl end
 function IsAltKeyDown() return Mock.keys.alt end
 
-Enum = { TooltipDataType = { Unit = 2 } }
+Enum = {
+    TooltipDataType = { Unit = 2 },
+    SendAddonMessageResult = { Success = 0, InvalidPrefix = 1, InvalidMessage = 2, AddonMessageThrottle = 3,
+        InvalidChatType = 4, NotInGroup = 5, TargetRequired = 6, InvalidChannel = 7, ChannelThrottle = 8,
+        GeneralError = 9, NotInGuild = 10, AddOnMessageLockdown = 11, TargetOffline = 12 },
+}
 TooltipDataProcessor = {
     AddTooltipPostCall = function(kind, fn)
         Mock.tooltipCalls[kind] = Mock.tooltipCalls[kind] or {}
@@ -311,5 +342,8 @@ function Mock.Reset()
     Mock.page, Mock.pageFrames = {}, {}
     Mock.valueCallbacks = {}
     Mock.uniqueNames = true
+    Mock.sent, Mock.sendResults, Mock.prefixes = {}, {}, {}
+    Mock.inGuild, Mock.inCombat, Mock.chatLockdown = true, false, false
+    Mock.maps = { [1431] = "Duskwood", [1433] = "Redridge Mountains" }
     GameTooltip.lines, GameTooltip.unit, GameTooltip.shown = {}, nil, false
 end

@@ -4,9 +4,9 @@
 -- Wanted marks on them. Remove takes the player off the list:
 --   - their kills: removed from every stored kill they're in (other killers stay),
 --     with tombstones so no source brings them back for those deaths;
---   - your own Wanted mark: withdrawn (shared as a withdrawal once sharing lands);
+--   - your own Wanted mark: withdrawn, and the withdrawal shared;
 --   - someone else's Wanted mark: hidden for you only.
--- Add by name marks a player "Wanted by you".
+-- Add by name marks a player "Wanted by you", and shares the mark.
 local _, ns = ...
 
 local List = ns.RegisterModule("List", {})
@@ -113,6 +113,7 @@ function List.Remove(row)
     for _, mark in ipairs(row.marks) do
         if Identity.IsSelf(mark.by) then
             Merge.SubmitWithdrawal({ target = mark.target, by = mark.by, at = now })
+            ns.Try(ns.Share and ns.Share.OwnWithdrawal, mark.target, now)
         else
             mark.hidden = true
         end
@@ -169,5 +170,6 @@ function List.AddByName(text)
     Store.ClearWithdrawal(Merge.PairKey(target, by))
     local mark = Merge.SubmitWanted({ target = target, by = by, at = ns.Now(), sources = { self = true }, own = true })
     if not mark then return false, L.ADD_FAILED end
+    ns.Try(ns.Share and ns.Share.OwnWanted, mark)
     return true, L.ADD_DONE:format(mark.target.name or name)
 end

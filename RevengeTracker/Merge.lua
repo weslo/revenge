@@ -6,11 +6,15 @@
 --     mapID = number?, x = 0..1?, y = 0..1?, zone = text?,
 --     sources = { [sourceId] = true },   -- e.g. "self", "revenge", "revengebook"
 --     own = true when Revenge itself (you or another Revenge user) reported it,
---     test = true for /revenge test kills }
+--     test = true for /revenge test kills,
+--     origin = "victim key#their kill id" on a report shared by another Revenge user;
+--              a stored kill keeps them all in origins = { [origin] = true } }
 --
--- Two reports are the same kill when they share the victim, at least one killer,
--- a time within the window (2 min when both are exact, 10 min otherwise) and the
--- map when both give a map ID. Revenge's own data wins any disagreement.
+-- Two reports are the same kill when they share an origin, or when they share the
+-- victim, at least one killer, a time within the window (2 min when both are exact,
+-- 10 min otherwise) and the map when both give a map ID. The origin joins the parts
+-- of a death sent in several messages, whose killers differ. Revenge's own data wins
+-- any disagreement.
 --
 -- A Wanted mark looks like:
 --   { target = identity, by = identity of whoever added it, at = time added,
@@ -107,9 +111,17 @@ local function MergeInto(kill, report)
         kill.mapID, kill.x, kill.y = report.mapID, report.x, report.y
     end
     kill.zone = (reportWins and report.zone) or kill.zone or report.zone
-    for source in pairs(report.sources) do kill.sources[source] = true end
+    for source in pairs(report.sources or {}) do kill.sources[source] = true end
+    if report.origin then
+        kill.origins = kill.origins or {}
+        kill.origins[report.origin] = true
+    end
     kill.own = kill.own or report.own
     ns.Store.Reindex(kill)
+end
+
+local function SameOrigin(kill, report)
+    return report.origin ~= nil and kill.origins ~= nil and kill.origins[report.origin] == true
 end
 
 -- Adds a kill report. Returns the stored kill, and true if it was new.
@@ -121,7 +133,7 @@ function Merge.SubmitKill(report)
     for _, killer in ipairs(report.killers) do Identity.Resolve(killer) end
     if ApplyTombstones(report) then return nil end
     for _, kill in ipairs(ns.Store.KillsByVictim(report.victim.key)) do
-        if SameKill(kill, report) then
+        if SameOrigin(kill, report) or SameKill(kill, report) then
             MergeInto(kill, report)
             ns.Changed()
             return kill, false
@@ -129,6 +141,8 @@ function Merge.SubmitKill(report)
     end
     report.id = ns.Store.NewId("k")
     report.sources = report.sources or {}
+    if report.origin then report.origins = { [report.origin] = true } end
+    report.origin = nil
     ns.Store.AddKill(report)
     ns.Changed()
     return report, true

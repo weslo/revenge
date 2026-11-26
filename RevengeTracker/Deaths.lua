@@ -85,7 +85,7 @@ local function TryRecord(serial, attempt, diedAt, where)
     if newest and math.abs(diedAt - newest) > RECAP_MAX_AGE then return end  -- an old recap
     local me = Identity.Self()
     if not me then return end
-    local kill = ns.Merge.SubmitKill({
+    local kill, new = ns.Merge.SubmitKill({
         victim = Copy(me),
         killers = killers,
         at = newest and math.floor(newest) or diedAt,
@@ -95,6 +95,7 @@ local function TryRecord(serial, attempt, diedAt, where)
         own = true,
     })
     if kill then ns.Debug("recorded death to %d killer(s)", #killers) end
+    if new then ns.Try(ns.Share and ns.Share.OwnKill, kill) end
 end
 
 local function OnPlayerDead()
@@ -104,12 +105,13 @@ local function OnPlayerDead()
     TryRecord(deathSerial, 0, ns.Now(), { mapID = mapID, x = x, y = y, zone = zone })
 end
 
--- /revenge test: a kill on you by `killer`, marked as a test.
-function Deaths.RecordTestKill(killer)
+-- /revenge test: a kill on you by `killer`, marked as a test. With share, it's also
+-- sent to guildmates (/revenge test share); returns how many messages were queued.
+function Deaths.RecordTestKill(killer, share)
     local me = Identity.Self()
-    if not me then return end
+    if not me then return 0 end
     local mapID, x, y, zone = WherePlayerIs()
-    ns.Merge.SubmitKill({
+    local kill = ns.Merge.SubmitKill({
         victim = Copy(me),
         killers = { Copy(killer) },
         at = ns.Now(),
@@ -119,6 +121,8 @@ function Deaths.RecordTestKill(killer)
         own = true,
         test = true,
     })
+    if not (share and kill) then return 0 end
+    return ns.Try(ns.Share and ns.Share.OwnKill, kill) or 0
 end
 
 function Deaths:OnLogin()
