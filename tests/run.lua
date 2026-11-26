@@ -4,26 +4,42 @@ local ROOT, FILTER = ...
 
 dofile(ROOT .. "/tests/wow_mock.lua")
 
-local function TocFiles()
+local function TocFiles(folder)
     local files = {}
-    for line in io.lines(ROOT .. "/RevengeTracker/RevengeTracker.toc") do
+    for line in io.lines(ROOT .. "/" .. folder .. "/" .. folder .. ".toc") do
         line = line:match("^%s*(.-)%s*$")
         -- XML files hold frame templates, which the mock doesn't need.
         if line ~= "" and not line:match("^#") and not line:lower():match("%.xml$") then
-            files[#files + 1] = ROOT .. "/RevengeTracker/" .. line:gsub("\\", "/")
+            files[#files + 1] = ROOT .. "/" .. folder .. "/" .. line:gsub("\\", "/")
         end
     end
     return files
+end
+
+local MODULE = "RevengeTracker_OtherAddons"
+
+-- The optional module, loaded when Revenge asks the game for it (C_AddOns.LoadAddOn).
+-- Its namespace is kept as Mock.module so tests can register fake adapters.
+local function LoadModuleFiles()
+    local mod = {}
+    Mock.module = mod
+    for _, path in ipairs(TocFiles(MODULE)) do
+        local chunk = assert(loadfile(path))
+        chunk(MODULE, mod)
+    end
 end
 
 -- Loads the addon as the game would: each file gets (addonName, ns).
 -- savedDB is what RevengeTrackerDB held on disk, or nil for a first run.
 function LoadAddon(savedDB, skipLogin)
     Mock.Reset()
+    Mock.addonFiles[MODULE] = LoadModuleFiles
+    Mock.module = nil
     RevengeTrackerDB = savedDB
     RevengeTracker = nil
+    DeathNoteDB, KillOnSightDB, HeadHunter_DB = nil, nil, nil
     local ns = {}
-    for _, path in ipairs(TocFiles()) do
+    for _, path in ipairs(TocFiles("RevengeTracker")) do
         local chunk = assert(loadfile(path))
         chunk("RevengeTracker", ns)
     end
@@ -59,7 +75,8 @@ function count(t)
     return n
 end
 
-for _, file in ipairs({ "test_identity", "test_merge", "test_foreign", "test_deaths", "test_tooltip", "test_store", "test_wanted", "test_list", "test_share", "test_alerts", "test_friends", "test_markers" }) do
+for _, file in ipairs({ "test_identity", "test_merge", "test_foreign", "test_deaths", "test_tooltip", "test_store", "test_wanted", "test_list", "test_share", "test_alerts", "test_friends", "test_markers",
+                       "test_others", "test_adapters" }) do
     dofile(ROOT .. "/tests/" .. file .. ".lua")
 end
 

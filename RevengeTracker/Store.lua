@@ -22,6 +22,8 @@ local KEEP_KILLS_DAYS = 60          -- history kept beyond the display expiry
 local MAX_NAMES = 2000              -- name cache size
 local KEEP_TOMBSTONES_DAYS = 90
 local KEEP_WITHDRAWALS_DAYS = 180
+local MAX_FOREIGN_KILLS = 1000      -- kills known only from other addons; the oldest go first
+local MAX_FOREIGN_MARKS = 500
 
 Store.DEFAULTS = {
     expiryDays = 7,
@@ -37,6 +39,10 @@ Store.DEFAULTS = {
     shareFriends = true,
     shareBattleNet = true,
     otherAddons = true,
+    otherRevengeBook = true,
+    otherGrudgekeeper = true,
+    otherHeadHunter = true,
+    otherKillOnSight = true,
 }
 
 local VALID = {
@@ -109,6 +115,7 @@ local function ValidMark(mark)
         return false
     end
     if type(mark.sources) ~= "table" then mark.sources = {} end
+    if mark.expires ~= nil and type(mark.expires) ~= "number" then mark.expires = nil end
     return true
 end
 
@@ -119,9 +126,9 @@ local function Prune()
             db.kills[id] = nil
         end
     end
-    -- Wanted marks never expire; only broken ones go.
+    -- Revenge's own Wanted marks never expire; broken ones go, and other addons' lapsed ones.
     for id, mark in pairs(db.wanted) do
-        if not ValidMark(mark) then db.wanted[id] = nil end
+        if not ValidMark(mark) or (mark.expires and mark.expires <= now) then db.wanted[id] = nil end
     end
     for pair, at in pairs(db.withdrawals) do
         if type(at) ~= "number" or now - at > KEEP_WITHDRAWALS_DAYS * 86400 then db.withdrawals[pair] = nil end
@@ -131,6 +138,23 @@ local function Prune()
             or now - stone.at > KEEP_TOMBSTONES_DAYS * 86400 then
             db.tombstones[id] = nil
         end
+    end
+    -- Data known only from other addons has its own cap, so it can't crowd out Revenge's.
+    local foreignKills, foreignMarks = {}, {}
+    for id, kill in pairs(db.kills) do
+        if not kill.own then foreignKills[#foreignKills + 1] = { id = id, at = kill.at } end
+    end
+    for id, mark in pairs(db.wanted) do
+        if not mark.own then foreignMarks[#foreignMarks + 1] = { id = id, at = mark.at } end
+    end
+    local function Newest(a, b) return a.at > b.at end
+    if #foreignKills > MAX_FOREIGN_KILLS then
+        table.sort(foreignKills, Newest)
+        for i = MAX_FOREIGN_KILLS + 1, #foreignKills do db.kills[foreignKills[i].id] = nil end
+    end
+    if #foreignMarks > MAX_FOREIGN_MARKS then
+        table.sort(foreignMarks, Newest)
+        for i = MAX_FOREIGN_MARKS + 1, #foreignMarks do db.wanted[foreignMarks[i].id] = nil end
     end
     -- Name cache: keep the most recently seen.
     local entries = {}
@@ -331,7 +355,20 @@ function Store.ClearWithdrawal(pair)
     ns.db.withdrawals[pair] = nil
 end
 
--- Whether a kill is recent enough to show.
+-- Whether data known only from other addons shows: not while their use is switched off.
+local function ForeignShown(record)
+    return record.own or Store.Setting("otherAddons") == true
+end
+
+-- Whether a kill is recent enough to show (and, if only other addons reported it,
+-- whether their data is in use).
 function Store.IsRecent(kill, now)
-    return (now or ns.Now()) - kill.at <= Store.Setting("expiryDays") * 86400
+    return (now or ns.Now()) - kill.at <= Store.Setting("expiryDays") * 86400 and ForeignShown(kill)
+end
+
+-- Whether a Wanted mark shows: not hidden by you, not lapsed, and not only from other
+-- addons while those are switched off.
+function Store.MarkShown(mark, now)
+    if mark.hidden or (mark.expires and mark.expires <= (now or ns.Now())) then return false end
+    return ForeignShown(mark) and true or false
 end

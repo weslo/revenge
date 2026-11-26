@@ -8,6 +8,10 @@
     <Frame name="RevengeTrackerListRowTemplate" virtual="true">
         <Size x="560" y="38"/>
     </Frame>
+    <!-- The "Other addons" status lines on the settings page (OthersPanel.lua). -->
+    <Frame name="RevengeTrackerOthersTemplate" virtual="true">
+        <Size x="600" y="76"/>
+    </Frame>
     <!-- A kill on the world map (MapPins.lua). The mixin is defined when the map is ready;
          no OnEnter/OnLeave here: the map wires them to OnMouseEnter/OnMouseLeave. -->
     <Frame name="RevengeTrackerKillPinTemplate" mixin="RevengeTrackerKillPinMixin" enableMouse="true" hidden="true" virtual="true">

@@ -126,7 +126,7 @@ test("removing your Wanted mark withdraws it; someone else's is hidden for you o
     ok(ns.List.AddByName("Gorvak Ashmane"), "you can add Gorvak again at once")
 end)
 
-test("the settings page follows the mock-up: Kills, Sharing, Alerts, then the list", function()
+test("the settings page follows the mock-up: Kills, Sharing, Alerts, the list, then other addons", function()
     LoadAddon()
     local kinds = {}
     for i, item in ipairs(Mock.page) do
@@ -136,8 +136,11 @@ test("the settings page follows the mock-up: Kills, Sharing, Alerts, then the li
         "# Kills", "slider", "dropdown", "checkbox", "checkbox",
         "# Sharing", "checkbox", "checkbox", "checkbox",
         "# Alerts", "checkbox", "checkbox", "checkbox", "checkbox", "checkbox",
-        "RevengeTrackerListTemplate" }, ", "))
-    eq(Mock.page[#Mock.page]:GetExtent(), 328, "matches the template height")
+        "RevengeTrackerListTemplate",
+        "# Other addons", "checkbox", "checkbox", "checkbox", "checkbox", "checkbox",
+        "RevengeTrackerOthersTemplate" }, ", "))
+    eq(Mock.page[#Mock.page - 7]:GetExtent(), 328, "the list matches its template height")
+    eq(Mock.page[#Mock.page]:GetExtent(), 76, "the status lines match theirs")
     local labels = {}
     for _, setting in pairs(Mock.settings) do labels[setting.key] = setting.name end
     eq(labels.nameplates, "Skull beside recent killers' nameplates")
@@ -219,5 +222,5 @@ test("if the list can't be built, the rest of the settings page still is", funct
     Settings.CreateElementInitializer = original
     ok(loaded, tostring(err))
     ok(Mock.registeredCategory, "category registered")
-    eq(#Mock.page, 15)
+    eq(#Mock.page, 21, "everything but the list and the other addons' status lines")
 end)

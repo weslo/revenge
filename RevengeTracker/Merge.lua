@@ -19,9 +19,10 @@
 -- A Wanted mark looks like:
 --   { target = identity, by = identity of whoever added it, at = time added,
 --     sources = { [sourceId] = true }, own = true when added through Revenge,
---     hidden = true when you removed someone else's mark (it stays hidden for you) }
--- The same target and adder make one mark. Marks never expire; only their adder
--- withdraws them, and a withdrawal beats any copy of the mark from before it.
+--     hidden = true when you removed someone else's mark (it stays hidden for you),
+--     expires = time, only on marks from another addon whose marks lapse }
+-- The same target and adder make one mark. Revenge's own marks never expire; only their
+-- adder withdraws them, and a withdrawal beats any copy of the mark from before it.
 local _, ns = ...
 
 local Merge = ns.RegisterModule("Merge", {})
@@ -180,6 +181,8 @@ function Merge.SubmitWanted(report)
         for source in pairs(report.sources or {}) do mark.sources[source] = true end
         mark.own = mark.own or report.own
         if report.at < mark.at then mark.at = report.at end
+        -- A mark lapses only if every copy of it would.
+        if mark.expires then mark.expires = report.expires and math.max(mark.expires, report.expires) or nil end
         ns.Store.ReindexWanted(mark)
         ns.Changed()
         return mark, false
@@ -193,11 +196,13 @@ function Merge.SubmitWanted(report)
 end
 
 -- The adder withdrew their mark at report.at: { target, by, at }. Removes it and
--- remembers the time, so an older copy arriving later is refused. Returns how many
+-- remembers the time, so an older copy arriving later is refused; with `forget`, only
+-- removes it (for an addon that always sends a mark's current state, so a copy from
+-- before can't arrive later, and the same mark may be made again). Returns how many
 -- marks were removed.
-function Merge.SubmitWithdrawal(report)
+function Merge.SubmitWithdrawal(report, forget)
     if not ValidMarkReport(report) then return 0 end
-    ns.Store.SetWithdrawal(Merge.PairKey(report.target, report.by), report.at)
+    if not forget then ns.Store.SetWithdrawal(Merge.PairKey(report.target, report.by), report.at) end
     local removed = 0
     for _, mark in ipairs(ns.Store.WantedFor(report.target.guid, report.target.key)) do
         if Identity.Same(mark.target, report.target) and Identity.Same(mark.by, report.by) and mark.at <= report.at then

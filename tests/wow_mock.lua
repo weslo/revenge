@@ -78,6 +78,7 @@ local WidgetMeta = {
 local function NewWidget(kind, parent, template)
     local widget = setmetatable({ kind = kind, parent = parent, template = template, scripts = {},
                                   text = nil, shown = true }, WidgetMeta)
+    if Mock.frames then table.insert(Mock.frames, widget) end
     if template == "InputBoxInstructionsTemplate" then
         widget.Instructions = NewWidget("FontString", widget)
     end
@@ -329,7 +330,49 @@ C_DeathRecap = {
     HasRecapEvents = function() return Mock.recap ~= nil and #Mock.recap > 0 end,
     GetRecapEvents = function() return Mock.recap end,
 }
-C_AddOns = { GetAddOnMetadata = function() return "0.1.0-test" end }
+-- Addons: Mock.loaded[name] is true once loaded. Mock.addonFiles[name] loads a
+-- load-on-demand addon's files (tests/run.lua); Mock.disabled[name] makes it refuse.
+C_AddOns = {
+    GetAddOnMetadata = function() return "0.1.0-test" end,
+    IsAddOnLoaded = function(name) return Mock.loaded[name] == true end,
+    LoadAddOn = function(name)
+        if Mock.loaded[name] then return true end
+        local load = Mock.addonFiles[name]
+        if not load then return false, "MISSING" end
+        if Mock.disabled[name] then return false, "DISABLED" end
+        Mock.loaded[name] = true
+        Mock.loadCount[name] = (Mock.loadCount[name] or 0) + 1
+        load()
+        Mock.Fire("ADDON_LOADED", name)
+        return true
+    end,
+}
+Mock.addonFiles = {}
+
+-- A high-resolution clock in milliseconds. Each read moves it on by Mock.profileStep;
+-- tests make work "slow" by adding to Mock.profile.
+function debugprofilestop()
+    Mock.profile = Mock.profile + Mock.profileStep
+    return Mock.profile
+end
+
+-- Runs n frames of `elapsed` seconds each: timers first, then every OnUpdate script.
+function Mock.Frames(n, elapsed)
+    elapsed = elapsed or 0.02
+    for _ = 1, n or 1 do
+        Mock.Advance(elapsed)
+        local frames = {}
+        for i, frame in ipairs(Mock.frames) do frames[i] = frame end
+        for _, frame in ipairs(frames) do
+            local script = frame.scripts.OnUpdate
+            if script then script(frame, elapsed) end
+        end
+    end
+end
+
+function IsInRaid() return Mock.inRaid end
+function GetNumGroupMembers() return Mock.groupSize end
+function GetRealmName() return "Realm" end
 
 ---------------------------------------------------------------------------
 -- Keys, tooltip, settings
@@ -463,4 +506,8 @@ function Mock.Reset()
     Mock.inGuild, Mock.inCombat, Mock.chatLockdown = true, false, false
     Mock.maps = { [1431] = "Duskwood", [1433] = "Redridge Mountains" }
     GameTooltip.lines, GameTooltip.unit, GameTooltip.shown = {}, nil, false
+    Mock.frames = {}
+    Mock.loaded, Mock.disabled, Mock.loadCount = { RevengeTracker = true }, {}, {}
+    Mock.profile, Mock.profileStep = 0, 0.001
+    Mock.inRaid, Mock.groupSize = false, 0
 end

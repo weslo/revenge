@@ -14,6 +14,7 @@ local Identity, Store = ns.Identity, ns.Store
 local SKULL = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:0|t "
 local LINE_R, LINE_G, LINE_B = 1, 0.55, 0.43
 local DETAIL_R, DETAIL_G, DETAIL_B = 0.79, 0.81, 0.84
+local VIA_COLOR = "  |cff888888"
 local MAX_NAMES = 3
 local MAX_DETAILS = 5
 
@@ -50,7 +51,7 @@ end
 function Tooltip.WantedMarksOn(identity)
     local marks = {}
     for _, mark in ipairs(Store.WantedFor(identity.guid, identity.key)) do
-        if not mark.hidden and Identity.Same(mark.target, identity) then marks[#marks + 1] = mark end
+        if Store.MarkShown(mark) and Identity.Same(mark.target, identity) then marks[#marks + 1] = mark end
     end
     return marks
 end
@@ -114,6 +115,9 @@ local function AddLines(tooltip, unit)
             for i = 1, math.min(#kills, MAX_DETAILS) do
                 local kill = kills[i]
                 local text = ("%s · %s · %s"):format(Identity.LongName(kill.victim), kill.zone or L.UNKNOWN_ZONE, ns.Ago(now - kill.at))
+                -- Known only from another addon: say which, in grey (Q-013).
+                local via = ns.Foreign and ns.Foreign.Via(kill)
+                if via then text = text .. VIA_COLOR .. L.VIA:format(via) .. "|r" end
                 tooltip:AddLine(text, DETAIL_R, DETAIL_G, DETAIL_B)
             end
             if #kills > MAX_DETAILS then
