@@ -1,5 +1,14 @@
 # Revenge changelog
 
+## Unreleased
+
+- Guild sharing: your deaths and the players you mark Wanted reach guildmates who run Revenge,
+  and theirs reach you. Their kills show on the killer's tooltip and in your list, and their
+  marks read "Wanted by" their name.
+- Catch-up: when you log in, guildmates send what you missed while you were offline.
+- Options › AddOns › Revenge has a new "Sharing" section to turn off sending your own.
+- `/revenge test share` sends a test kill to your guild, to try it out.
+
 ## v0.1.0
 
 The first release, for World of Warcraft: Forever.

@@ -10,6 +10,7 @@
 --   tombstones = { [killId] = { victim = key, killers = { { key, guid, partial }... }, at = time,
 --                               all = true when the whole kill was dismissed } },
 --   nextId   = counter,
+--   lastSeen = server time of the last logout (Share.lua: what catch-up asks for),
 -- }
 local _, ns = ...
 
@@ -98,6 +99,7 @@ local function ValidKill(kill)
         if not ValidIdentity(killer) then return false end
     end
     if type(kill.sources) ~= "table" then kill.sources = {} end
+    if kill.origins ~= nil and type(kill.origins) ~= "table" then kill.origins = nil end
     return true
 end
 
@@ -154,6 +156,7 @@ function Store.Init()
         if type(db[key]) ~= "table" then db[key] = {} end
     end
     db.nextId = type(db.nextId) == "number" and db.nextId or 1
+    if type(db.lastSeen) ~= "number" then db.lastSeen = nil end
     -- Default only missing or invalid values; a saved false is intentional.
     for key, default in pairs(Store.DEFAULTS) do
         if db.settings[key] == nil or not ValidSetting(key, db.settings[key]) then

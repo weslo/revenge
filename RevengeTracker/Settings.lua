@@ -47,6 +47,12 @@ local function AddModifierDropdown()
     Settings.CreateDropdown(category, setting, Options, L.SETTING_MODIFIER_TOOLTIP)
 end
 
+local function AddShareGuild()
+    if not Settings.CreateCheckbox then return end
+    local setting = Register("shareGuild", Settings.VarType.Boolean, L.SETTING_SHARE_GUILD, ns.Store.DEFAULTS.shareGuild)
+    Settings.CreateCheckbox(category, setting, L.SETTING_SHARE_GUILD_TOOLTIP)
+end
+
 function Settings_:OnLogin()
     if not (Settings and Settings.RegisterVerticalLayoutCategory and Settings.RegisterAddOnSetting
         and Settings.RegisterAddOnCategory and Settings.VarType) then
@@ -57,6 +63,8 @@ function Settings_:OnLogin()
     AddSectionHeader(L.SECTION_KILLS)
     AddExpirySlider()
     AddModifierDropdown()
+    AddSectionHeader(L.SECTION_SHARING)
+    AddShareGuild()
     -- The list is the only custom element; if it can't be built, the rest still works.
     local ok, err = pcall(ns.ListPanel.AddTo, layout)
     if not ok then ns.Debug("list error: %s", tostring(err)) end

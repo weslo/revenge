@@ -4,9 +4,8 @@ A lightweight addon for **World of Warcraft: Forever** (interface 16001). When y
 enemy player, it shows whether they recently killed you, a friend or a guildmate, so you can
 get your revenge.
 
-**Status:** early development. For now it tracks your own deaths; sharing with guildmates and
-friends comes next ([#4](https://github.com/weslo/revenge/issues/4),
-[#5](https://github.com/weslo/revenge/issues/5)). What's in each version: [changelog](CHANGELOG.md).
+**Status:** early development. It tracks your own deaths and shares them with guildmates who run
+Revenge; friends and Battle.net friends come next ([#5](https://github.com/weslo/revenge/issues/5)). What's in each version: [changelog](CHANGELOG.md).
 
 ## Install
 
@@ -34,8 +33,9 @@ folder. Then restart the game.
   set up once with `python -m venv .venv` and `.venv\Scripts\python.exe -m pip install lupa==2.8`,
   then run `.venv\Scripts\python.exe -I tests\run.py` (optionally with a test-name filter).
 - In game: `/revenge` opens the settings (with the list of recent killers), `/revenge add First Last`
-  marks a player Wanted by you, `/revenge test` records a test kill by your target, and
-  `/revenge test clear` removes those. `/revenge debug` toggles a debug log.
+  marks a player Wanted by you, `/revenge test` records a test kill by your target,
+  `/revenge test share` also sends it to guildmates running Revenge, and `/revenge test clear` removes
+  test kills. `/revenge debug` toggles a debug log.
 - CI (`.github/workflows/build.yml`) runs the checks and tests above on every pull request and
   push to `main`. It also builds the release zip with the
   [BigWigs packager](https://github.com/BigWigsMods/packager) (settings in `.pkgmeta`), without
@@ -47,3 +47,4 @@ folder. Then restart the game.
 - What it will do: [requirements](docs/plans/revenge/REQUIREMENTS.md)
 - Build order and progress: [implementation matrix](docs/plans/revenge/IMPLEMENTATION-MATRIX.md)
 - Reading other PvP addons' shared data: [other addons](docs/plans/revenge/OTHER-ADDONS.md)
+- How Revenge shares with guildmates: [protocol](docs/plans/revenge/PROTOCOL.md)
