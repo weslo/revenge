@@ -4,8 +4,22 @@ A lightweight addon for **World of Warcraft: Forever** (interface 16001). When y
 enemy player, it shows whether they recently killed you, a friend or a guildmate, so you can
 get your revenge.
 
-**Status:** early development. No release to install yet; the first one is
-[#3](https://github.com/weslo/revenge/issues/3).
+**Status:** early development. For now it tracks your own deaths; sharing with guildmates and
+friends comes next ([#4](https://github.com/weslo/revenge/issues/4),
+[#5](https://github.com/weslo/revenge/issues/5)). What's in each version: [changelog](CHANGELOG.md).
+
+## Install
+
+With [instawow](https://github.com/layday/instawow):
+
+```
+instawow install github:weslo/revenge
+```
+
+Or download the `Revenge-…-forever.zip` file from the
+[latest release](https://github.com/weslo/revenge/releases/latest) and unzip it into
+`World of Warcraft\_forever_\Interface\AddOns`, so that you get an `AddOns\RevengeTracker`
+folder. Then restart the game.
 
 ## Development
 
@@ -22,6 +36,13 @@ get your revenge.
 - In game: `/revenge` opens the settings (with the list of recent killers), `/revenge add First Last`
   marks a player Wanted by you, `/revenge test` records a test kill by your target, and
   `/revenge test clear` removes those. `/revenge debug` toggles a debug log.
+- CI (`.github/workflows/build.yml`) runs the checks and tests above on every pull request and
+  push to `main`. It also builds the release zip with the
+  [BigWigs packager](https://github.com/BigWigsMods/packager) (settings in `.pkgmeta`), without
+  uploading it, and `tools/check_package.py` checks that the zip holds only the addon folder.
+- To release: add the version's section to the top of `CHANGELOG.md`, merge it, then tag `main`
+  (`git tag v0.2.0`, `git push origin v0.2.0`). The workflow publishes the GitHub release, with
+  the zip and the `release.json` that instawow reads. The TOC's `@project-version@` becomes the tag.
 
 - What it will do: [requirements](docs/plans/revenge/REQUIREMENTS.md)
 - Build order and progress: [implementation matrix](docs/plans/revenge/IMPLEMENTATION-MATRIX.md)

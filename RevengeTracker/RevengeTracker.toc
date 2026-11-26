@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Revenge
 ## Notes: Shows on an enemy's tooltip whether they recently killed you, a friend or a guildmate.
-## Version: 0.1.0-dev
+## Version: @project-version@
 ## SavedVariables: RevengeTrackerDB
 ## X-Website: https://github.com/weslo/revenge
 
