@@ -1,6 +1,6 @@
 # Revenge changelog
 
-## Unreleased
+## v0.3.0
 
 - Sharing with in-game friends and Battle.net friends who run Revenge, each with its own switch
   under Sharing. Battle.net friends count only on WoW: Forever and your own faction.
