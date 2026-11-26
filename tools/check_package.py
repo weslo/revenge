@@ -8,7 +8,8 @@ RELEASE_DIR defaults to .release, where the packager writes. Exit code 1 if:
   leftover "Revenge" folder from a packaging mistake);
 - the TOC is missing, its interface isn't Forever's (16000-19999), or its version is still
   the @project-version@ placeholder;
-- a file the TOC lists is missing, or there's a file the TOC doesn't list;
+- a file the TOC lists is missing, or there's a file the TOC doesn't list (textures in
+  RevengeTracker/Media/ are the exception: code loads them by path);
 - with --release-json: release.json doesn't list the zip with flavor "forever" and a Forever
   interface. That entry is how instawow picks this build.
 """
@@ -23,6 +24,8 @@ from pathlib import Path
 FOLDER = "RevengeTracker"
 TOC = f"{FOLDER}/{FOLDER}.toc"
 FOREVER = range(16000, 20000)
+MEDIA = (f"{FOLDER}/Media/",)
+MEDIA_TYPES = (".tga", ".blp")
 
 
 def read_toc(text: str) -> tuple[dict[str, str], list[str]]:
@@ -61,7 +64,7 @@ def check_zip(path: Path) -> list[str]:
     expected = {f"{FOLDER}/{name}" for name in listed} | {TOC}
     inside = {n for n in names if n.startswith(FOLDER + "/")}
     missing = sorted(expected - inside)
-    extra = sorted(inside - expected)
+    extra = sorted(n for n in inside - expected if not (n.startswith(MEDIA) and n.lower().endswith(MEDIA_TYPES)))
     if missing:
         problems.append(f"listed in the TOC but missing: {', '.join(missing)}")
     if extra:
