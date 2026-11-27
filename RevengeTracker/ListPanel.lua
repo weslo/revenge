@@ -118,7 +118,7 @@ local function InitRow(row, item)
     row.whenText:SetText(item.when)
     row.removeButton:SetScript("OnClick", function()
         local ok, err = pcall(RemoveItem, item)
-        if not ok then ns.Debug("remove error: %s", tostring(err)) end
+        if not ok then ns.Fail("remove error: %s", tostring(err)) end
     end)
 end
 

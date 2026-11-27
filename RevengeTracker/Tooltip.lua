@@ -104,6 +104,28 @@ function Tooltip.WantedText(marks)
     return L.WANTED_BY:format(NameList(you, others))
 end
 
+-- What a player has against them: "(5) You, Mira, +1 more", "Wanted by Mira", or both,
+-- joined by " · ". Nil when nothing recent.
+function Tooltip.Summary(identity, now)
+    local parts = {}
+    local kills = Tooltip.RecentKillsBy(identity, now)
+    if #kills > 0 then parts[#parts + 1] = Tooltip.SummaryText(kills) end
+    local marks = Tooltip.WantedMarksOn(identity)
+    if #marks > 0 then parts[#parts + 1] = Tooltip.WantedText(marks) end
+    if #parts == 0 then return nil end
+    return table.concat(parts, " · ")
+end
+
+-- The diagnostic log notes the first time each player's tooltip showed Revenge's lines.
+local logged = {}
+
+local function LogShown(identity, now)
+    local id = identity.guid or identity.key
+    if not id or logged[id] or not ns.Diagnostics.On() then return end
+    logged[id] = true
+    ns.Log("tooltip", "%s: %s", identity.name, Tooltip.Summary(identity, now))
+end
+
 local function AddLines(tooltip, unit)
     local identity = Identity.FromUnit(unit)
     if not identity then return end
@@ -129,6 +151,7 @@ local function AddLines(tooltip, unit)
     if #marks > 0 then
         tooltip:AddLine(SKULL .. Tooltip.WantedText(marks), LINE_R, LINE_G, LINE_B)
     end
+    if #kills > 0 or #marks > 0 then LogShown(identity, now) end
 end
 
 local function OnUnitTooltip(tooltip)
@@ -152,7 +175,7 @@ function Tooltip:OnLogin()
     if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
         TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip)
             local ok, err = pcall(OnUnitTooltip, tooltip)
-            if not ok then ns.Debug("tooltip error: %s", tostring(err)) end
+            if not ok then ns.Fail("tooltip error: %s", tostring(err)) end
         end)
     elseif GameTooltip and GameTooltip.HookScript then
         GameTooltip:HookScript("OnTooltipSetUnit", function(tooltip) pcall(OnUnitTooltip, tooltip) end)

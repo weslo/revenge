@@ -76,7 +76,7 @@ function count(t)
 end
 
 for _, file in ipairs({ "test_identity", "test_merge", "test_foreign", "test_deaths", "test_tooltip", "test_store", "test_wanted", "test_list", "test_share", "test_alerts", "test_friends", "test_markers",
-                       "test_others", "test_adapters" }) do
+                       "test_others", "test_adapters", "test_log" }) do
     dofile(ROOT .. "/tests/" .. file .. ".lua")
 end
 

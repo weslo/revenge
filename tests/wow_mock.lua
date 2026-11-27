@@ -373,6 +373,7 @@ end
 function IsInRaid() return Mock.inRaid end
 function GetNumGroupMembers() return Mock.groupSize end
 function GetRealmName() return "Realm" end
+function GetBuildInfo() return "1.60.1", "70938", "Nov 1 2026", 16001 end
 
 ---------------------------------------------------------------------------
 -- Keys, tooltip, settings

@@ -55,16 +55,28 @@ local function Plate(unit)
     return plate
 end
 
+-- The diagnostic log notes the first time each player got the skull this session.
+local logged = {}
+
+local function LogSkull(identity, now)
+    local id = identity.guid or identity.key
+    if not id or logged[id] or not ns.Diagnostics.On() then return end
+    logged[id] = true
+    ns.Log("skull", "%s: %s", identity.name, Tooltip.Summary(identity, now))
+end
+
 local function Update(unit)
     if Store.Setting("nameplates") ~= true or Try(IsInInstance) then return Release(unit) end
     local plate = Plate(unit)
-    if not (plate and Nameplates.Marked(Identity.FromUnit(unit), ns.Now())) then return Release(unit) end
+    local identity, now = Identity.FromUnit(unit), ns.Now()
+    if not (plate and Nameplates.Marked(identity, now)) then return Release(unit) end
     local mark = marks[unit] or Acquire()
     marks[unit] = mark
     mark:SetParent(plate)
     mark:ClearAllPoints()
     mark:SetPoint("RIGHT", plate, "LEFT", -GAP, 0)
     mark:Show()
+    LogSkull(identity, now)
 end
 
 local function ReleaseAll()

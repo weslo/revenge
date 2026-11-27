@@ -198,6 +198,9 @@ end
 
 -- Someone sent us a valid message, so they run Revenge.
 function Friends.MarkPeer(route)
+    if not peers[route.key] then
+        ns.Log("friends", "%s runs Revenge (%s)", route.name, route.channel == "BN" and "Battle.net" or "in-game friend")
+    end
     peers[route.key] = true
 end
 

@@ -11,6 +11,7 @@
 --                               all = true when the whole kill was dismissed } },
 --   nextId   = counter,
 --   lastSeen = server time of the last logout (Share.lua: what catch-up asks for),
+--   log      = { "<server time> <kind> <text>", ... },  -- only once the diagnostic log was on (Diagnostics.lua)
 -- }
 local _, ns = ...
 
@@ -43,6 +44,7 @@ Store.DEFAULTS = {
     otherGrudgekeeper = true,
     otherHeadHunter = true,
     otherKillOnSight = true,
+    diagnosticLog = false,
 }
 
 local VALID = {

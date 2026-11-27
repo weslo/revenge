@@ -53,27 +53,41 @@ end
 
 local function RunMessage(item)
     local adapter = item.adapter
-    if not mod.Usable(adapter) or not mod.Trusted(item.sender, item.channel) then return end
+    if not mod.Usable(adapter) then return end
+    if not mod.Trusted(item.sender, item.channel) then return mod.Count(adapter, "stranger") end
     local started = Clock()
     local ok, records = pcall(adapter.Decode, item.prefix, item.text, item.channel, item.sender)
     if Clock() - started > Queue.OVERRUN_MS then Breaker.Overrun(adapter.breaker) end
     if not ok then
         Breaker.Error(adapter.breaker)
-        mod.Debug("%s: %s", adapter.id, records)
+        mod.Fail("%s: %s", adapter.id, records)
         return
     end
     if type(records) ~= "table" then
         Breaker.Parsed(adapter.breaker, false)
+        mod.Count(adapter, "unparseable")
         return
     end
     Breaker.Parsed(adapter.breaker, true)
-    if #records > 0 then Submit(adapter, records, item.sender, item.channel) end
+    if #records == 0 then return mod.Count(adapter, "ignored") end
+    mod.Count(adapter, "decoded")
+    Submit(adapter, records, item.sender, item.channel)
 end
 
-local function EndJob(result)
+-- Ends the running import. A read that found something, stopped, or was the first
+-- this session gets a line in the diagnostic log.
+local function EndJob(result, why)
     local adapter = job.adapter
     adapter.importing = false
-    if result == false then adapter.importUnrecognised = true end
+    if result == false then
+        adapter.importUnrecognised = true
+        why = "a structure it doesn't recognise, so it stops reading for this session"
+    end
+    if job.emitted > 0 or why or not adapter.importLogged then
+        adapter.importLogged = true
+        mod.Log("others", "%s read its saved data: %d new records handed over, %d taken%s", adapter.id, job.emitted,
+            job.taken, why and ("; " .. why) or "")
+    end
     job = nil
 end
 
@@ -83,22 +97,22 @@ local function FlushJob()
     for i = 1, #batch, Queue.SUBMIT_CHUNK do
         local chunk = {}
         for j = i, math.min(i + Queue.SUBMIT_CHUNK - 1, #batch) do chunk[#chunk + 1] = batch[j] end
-        Submit(job.adapter, chunk, nil, "SAVED")
+        job.taken = job.taken + Submit(job.adapter, chunk, nil, "SAVED")
     end
 end
 
 -- One slice of the running import.
 local function RunJob()
     local adapter = job.adapter
-    if not mod.Usable(adapter) then return EndJob() end
+    if not mod.Usable(adapter) then return EndJob(nil, "stopped: switched off or paused") end
     local started = Clock()
     local ok, result = coroutine.resume(job.co)
     if Clock() - started > Queue.OVERRUN_MS then Breaker.Overrun(adapter.breaker) end
     if not ok then
         Breaker.Error(adapter.breaker)
-        mod.Debug("%s import: %s", adapter.id, result)
+        mod.Fail("%s import: %s", adapter.id, result)
         job.batch = {}
-        return EndJob()
+        return EndJob(nil, "stopped by an error")
     end
     FlushJob()
     if coroutine.status(job.co) == "dead" or job.emitted >= Queue.IMPORT_MAX then EndJob(result) end
@@ -126,13 +140,16 @@ local function Wake()
     if not frame then frame = CreateFrame("Frame") end
     frame:SetScript("OnUpdate", function()
         local ok, err = pcall(Step)
-        if not ok then mod.Debug("queue: %s", err) end
+        if not ok then mod.Fail("queue: %s", err) end
     end)
 end
 
 -- A message for an adapter: { adapter, prefix, text, channel, sender }.
 function Queue.Push(item)
-    if Size() >= Queue.MAX then Pop() end
+    if Size() >= Queue.MAX then
+        local dropped = Pop()
+        if dropped then mod.Count(dropped.adapter, "overflow") end
+    end
     last = last + 1
     items[last] = item
     Wake()
@@ -145,7 +162,7 @@ end
 -- session is skipped, so later runs hand over only what's new.
 function Queue.StartImport(adapter)
     if job or not adapter.Import or not mod.Usable(adapter) then return false end
-    local run = { adapter = adapter, batch = {}, emitted = 0 }
+    local run = { adapter = adapter, batch = {}, emitted = 0, taken = 0 }
     local function Emit(record)
         if run.emitted >= Queue.IMPORT_MAX then return false end
         if type(record) ~= "table" then return true end

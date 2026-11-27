@@ -30,7 +30,7 @@ read_globals = {
     "GetTime", "IsInGuild", "Ambiguate", "UIParent", "PlaySound", "SOUNDKIT",
     "C_NamePlate", "C_BattleNet", "BNGetNumFriends", "BNSendGameData", "BNET_CLIENT_WOW", "WOW_PROJECT_ID",
     "WorldMapFrame", "CreateFromMixins", "Mixin", "MapCanvasDataProviderMixin", "MapCanvasPinMixin", "MenuUtil",
-    "IsInRaid", "GetNumGroupMembers",
+    "IsInRaid", "GetNumGroupMembers", "GetBuildInfo",
 }
 
 -- The optional module reads other addons' saved data (never writes it), and Revenge's

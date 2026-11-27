@@ -68,23 +68,33 @@ local function KillersFromRecap(events)
     return killers, newest
 end
 
+local function NotRecorded(why, ...)
+    ns.Log("death", "not recorded: " .. why, ...)
+end
+
 local function TryRecord(serial, attempt, diedAt, where)
     if serial ~= deathSerial then return end
     local events = C_DeathRecap and Try(C_DeathRecap.HasRecapEvents) and Try(C_DeathRecap.GetRecapEvents)
     if type(events) ~= "table" or #events == 0 then
         local delay = RETRY_DELAYS[attempt + 1]
-        if delay then ns.After(delay, function() TryRecord(serial, attempt + 1, diedAt, where) end) end
+        if delay then
+            ns.After(delay, function() TryRecord(serial, attempt + 1, diedAt, where) end)
+        else
+            NotRecorded("no death recap in %s", where.zone)
+        end
         return
     end
     deathSerial = deathSerial + 1  -- handled: ignore later retries for this death
     local killers, newest = KillersFromRecap(events)
-    if #killers == 0 then return end
+    if #killers == 0 then return NotRecorded("no enemy player among the death recap's %d hits, in %s", #events, where.zone) end
     -- Timestamps are expected to be server time; anything else is ignored rather
     -- than trusted, so an unexpected unit can't discard real deaths.
     if newest and newest < 1e9 then newest = nil end
-    if newest and math.abs(diedAt - newest) > RECAP_MAX_AGE then return end  -- an old recap
+    if newest and math.abs(diedAt - newest) > RECAP_MAX_AGE then  -- an old recap
+        return NotRecorded("the death recap was %d seconds old", math.floor(math.abs(diedAt - newest)))
+    end
     local me = Identity.Self()
-    if not me then return end
+    if not me then return NotRecorded("your own name wasn't readable") end
     local kill, new = ns.Merge.SubmitKill({
         victim = Copy(me),
         killers = killers,
@@ -94,12 +104,19 @@ local function TryRecord(serial, attempt, diedAt, where)
         sources = { self = true },
         own = true,
     })
-    if kill then ns.Debug("recorded death to %d killer(s)", #killers) end
-    if new then ns.Try(ns.Share and ns.Share.OwnKill, kill) end
+    if not kill then return NotRecorded("killed by %s, a death dismissed earlier", ns.Diagnostics.Names(killers)) end
+    ns.Debug("recorded death to %d killer(s)", #killers)
+    local sent = new and ns.Try(ns.Share and ns.Share.OwnKill, kill) or 0
+    ns.Log("death", "recorded: killed by %s in %s (map %s, %s), %s; %d messages queued to share",
+        ns.Diagnostics.Names(killers), where.zone, where.mapID, where.x and "with position" or "no position",
+        new and "new" or "merged with one already known", sent)
 end
 
 local function OnPlayerDead()
-    if not IsOpenWorld() then return end
+    if not IsOpenWorld() then
+        local _, kind = Try(IsInInstance)
+        return NotRecorded("in an instance (%s)", kind)
+    end
     deathSerial = deathSerial + 1
     local mapID, x, y, zone = WherePlayerIs()
     TryRecord(deathSerial, 0, ns.Now(), { mapID = mapID, x = x, y = y, zone = zone })

@@ -22,24 +22,27 @@ local lastNearby = {}           -- player GUID or key -> time of their last aler
 
 local function Setting(key) return Store.Setting(key) == true end
 
+-- Shows an alert; returns how it showed ("popup, chat, sound"), for the diagnostic log.
 local function Show(title, detail, chat, sound)
-    if Setting("alertPopup") and ns.Popup then ns.Try(ns.Popup.Show, title, detail) end
+    local how = {}
+    if Setting("alertPopup") and ns.Popup then
+        how[#how + 1] = ns.Try(ns.Popup.Show, title, detail) and "popup" or "popup failed"
+    end
     if Setting("alertChat") then
         ns.Print(chat)
-        if sound and NEARBY_SOUND and Setting("alertSound") then Try(PlaySound, NEARBY_SOUND, "SFX") end
+        how[#how + 1] = "chat"
+        if sound and NEARBY_SOUND and Setting("alertSound") then
+            Try(PlaySound, NEARBY_SOUND, "SFX")
+            how[#how + 1] = "sound"
+        end
     end
+    return #how > 0 and table.concat(how, ", ") or "not shown: popup and chat are both off"
 end
 
 -- What a nearby player has against them: "(5) You, Mira, +1 more", "Wanted by Mira",
 -- or both. Nil when nothing recent.
 local function Summary(identity, now)
-    local parts = {}
-    local kills = ns.Tooltip.RecentKillsBy(identity, now)
-    if #kills > 0 then parts[#parts + 1] = ns.Tooltip.SummaryText(kills) end
-    local marks = ns.Tooltip.WantedMarksOn(identity)
-    if #marks > 0 then parts[#parts + 1] = ns.Tooltip.WantedText(marks) end
-    if #parts == 0 then return nil end
-    return table.concat(parts, " · ")
+    return ns.Tooltip.Summary(identity, now)
 end
 
 -- A player came into view. Returns true if it alerted.
@@ -53,7 +56,8 @@ function Alerts.Seen(identity)
     if not summary then return false end
     lastNearby[id] = now
     local name = identity.name or "?"
-    Show(L.ALERT_NEARBY:format(name), summary, L.ALERT_NEARBY_CHAT:format(name, summary), true)
+    local how = Show(L.ALERT_NEARBY:format(name), summary, L.ALERT_NEARBY_CHAT:format(name, summary), true)
+    ns.Log("alert", "nearby: %s: %s (%s)", name, summary, how)
     return true
 end
 
@@ -82,7 +86,8 @@ function Alerts.FriendKilled(kill)
         else
             chat = L.ALERT_KILLED_CHAT:format(victim, killers) .. test
         end
-        Show(title, zone, chat, false)
+        local how = Show(title, zone, chat, false)
+        ns.Log("alert", "killed: %s by %s in %s%s (%s)", victim, killers, zone or "?", kill.test and ", a test" or "", how)
     end)
 end
 

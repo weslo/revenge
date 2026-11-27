@@ -14,13 +14,15 @@ Breaker.ERRORS = 5
 Breaker.WINDOW = 50
 Breaker.OVERRUNS = 3
 
-function Breaker.New()
-    return { errors = 0, overruns = 0, results = {}, at = 0, fails = 0, tripped = false }
+-- onTrip(why), if given, runs once when it trips (Host.lua: the diagnostic log).
+function Breaker.New(onTrip)
+    return { errors = 0, overruns = 0, results = {}, at = 0, fails = 0, tripped = false, onTrip = onTrip }
 end
 
 local function Trip(breaker, why)
     if breaker.tripped then return end
     breaker.tripped, breaker.why = true, why
+    if breaker.onTrip then pcall(breaker.onTrip, why) end
 end
 
 function Breaker.Error(breaker)
