@@ -1,5 +1,14 @@
 # Revenge changelog
 
+## Unreleased
+
+- A diagnostic log, off by default, for looking into a problem later. `/revenge log on` (or "Keep a
+  diagnostic log" under Options › AddOns › Revenge › Troubleshooting) saves a short line for each of
+  your deaths, what's shared and received, alerts, nameplate skulls, map pins, other addons' reports and
+  any error Revenge catches. Nothing is shown in chat or sent to anyone, and it keeps the newest 2,000
+  lines. `/revenge log off` stops it, `/revenge log clear` empties it, and `/revenge log` says how many
+  lines it has.
+
 ## v0.4.0
 
 - Data from other PvP addons counts too: deaths and wanted players that guildmates and friends
