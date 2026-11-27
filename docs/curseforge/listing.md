@@ -1,32 +1,44 @@
 # CurseForge listing (draft)
 
 What to enter when creating the project in CurseForge's author dashboard (World of Warcraft).
-The logo is [logo.png](logo.png), drawn by `tools/make_logo.py`.
+The logo is [logo.png](logo.png), 400×400 as CurseForge asks, drawn by `tools/make_logo.py`.
 
 ## Name
 
 **Revenge Tracker** is suggested. "Revenge" alone may already be taken on CurseForge (luisjedev's
 "Revenge" addon), and the addon's folder is `RevengeTracker`. In game it's still called "Revenge".
+CurseForge rejects a name that's taken, and a name with a version or the game's name in it.
 
 ## Summary
 
-> See who killed you, your friends and your guildmates, right on their tooltip. For WoW: Forever.
+> See who recently killed you, your friends and your guildmates, right on their tooltip in WoW: Forever.
+
+One sentence, as CurseForge prefers.
 
 ## Categories
 
-PvP as the main category. Tooltip and Map & Minimap fit as extras, if the dashboard offers them.
+PvP as the main category. Tooltip and Map & Minimap fit as extras (up to four).
 
 ## License
 
-The repository has no license yet, so pick one:
-- **All Rights Reserved** keeps every right.
-- **MIT** lets others reuse the code freely.
-
-Whichever you pick, a LICENSE file in the repository should match.
+**MIT License**, matching [LICENSE](../../LICENSE). If the dropdown doesn't list it, choose
+**Custom License** and paste that file.
 
 ## Source
 
 https://github.com/weslo/revenge, with issues at https://github.com/weslo/revenge/issues.
+
+## The first file
+
+CurseForge reviews a new project only once it has a file. Upload the newest release's zip
+(`Revenge-v0.5.0-forever.zip` as of v0.5.0, from https://github.com/weslo/revenge/releases/latest) on
+the project's **Files** tab:
+- **Release type:** Release.
+- **Supported version:** the WoW: Forever version (1.60.x).
+- **Changelog:** that version's section of [CHANGELOG.md](../../CHANGELOG.md).
+
+Later releases upload from GitHub by themselves, once the project's number and an upload token are
+set up.
 
 ## Description
 

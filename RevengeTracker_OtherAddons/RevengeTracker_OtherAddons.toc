@@ -5,6 +5,7 @@
 ## Dependencies: RevengeTracker
 ## LoadOnDemand: 1
 ## X-Website: https://github.com/weslo/revenge
+## X-License: MIT
 
 Breaker.lua
 Queue.lua

@@ -60,3 +60,8 @@ what reads other addons' data, and Revenge loads it only while that's switched o
 - Build order and progress: [implementation matrix](docs/plans/revenge/IMPLEMENTATION-MATRIX.md)
 - Reading other PvP addons' shared data: [other addons](docs/plans/revenge/OTHER-ADDONS.md)
 - How Revenge shares with guildmates: [protocol](docs/plans/revenge/PROTOCOL.md)
+
+## License
+
+[MIT](LICENSE). The release zip doesn't carry the LICENSE file, since it holds only the two addon
+folders; both TOCs say `## X-License: MIT`.

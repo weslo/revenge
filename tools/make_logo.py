@@ -2,7 +2,8 @@
 
 The skull is the same shape as the addon's own (tools/make_skull.py, from the accepted
 mock-up), coral (#ff8c6e, the colour for your own deaths) with dark eyes, on a dark square.
-512x512 PNG, written with the standard library only. The output is deterministic.
+400x400 PNG, the size CurseForge's moderation policy asks for, written with the standard
+library only. The output is deterministic.
 
 Usage: python -I tools/make_logo.py
 """
@@ -18,7 +19,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / "docs" / "curseforge" / "logo.png"
-SIZE = 512
+SIZE = 400                        # CurseForge: "All avatars need to be 400x400 pixels"
 SAMPLES = 3                       # supersampling per axis
 SKULL_HEIGHT = 0.70               # of the image
 CORAL = (255, 140, 110)
