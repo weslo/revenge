@@ -2,7 +2,7 @@
 
 - Requirements: [REQUIREMENTS.md](REQUIREMENTS.md)
 - Integration owner: Claude (the session building the addon)
-- Updated: 2026-11-27, after S19 (the diagnostic log) was built; work is tracked in GitHub Issues (see the build order)
+- Updated: 2026-11-27, after S19 (the diagnostic log) was built and released as `v0.5.0`; work is tracked in GitHub Issues (see the build order)
 - Evidence directory: `docs/plans/revenge/evidence/` (screenshots, Bugsy exports, test notes)
 
 ## Implementation coverage
@@ -76,14 +76,14 @@ Validation statuses: `pass`, `fail`, `not run`, `not applicable` (with reason), 
 ## Resume checkpoint
 
 - Updated by / at: Claude, 2026-11-27 (S19, the diagnostic log)
-- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`, GitHub `weslo/revenge` (public). GitHub `main` has the plan, the mock-up, S01 to S04 (squash `fb6ec6c`, pull request #16) and S11 (squash `2857836`, pull request #17), tagged `v0.1.0` and released. S05 merged (pull request #19) and released as `v0.2.0`. S06 to S12 merged (pull request #21) and released as `v0.3.0`. S14 to S18 merged (pull request #22, for #11 to #15, DEC-031) and released as `v0.4.0`. S19 (the diagnostic log) is on `feature/23-diagnostic-log`, in a pull request for #23 (DEC-033). Local `main` follows `origin/main`
+- Repository / branch: `C:\Users\wesle\Documents\GitHub\revenge`, GitHub `weslo/revenge` (public). GitHub `main` has the plan, the mock-up, S01 to S04 (squash `fb6ec6c`, pull request #16) and S11 (squash `2857836`, pull request #17), tagged `v0.1.0` and released. S05 merged (pull request #19) and released as `v0.2.0`. S06 to S12 merged (pull request #21) and released as `v0.3.0`. S14 to S18 merged (pull request #22, for #11 to #15, DEC-031) and released as `v0.4.0`. S19 (the diagnostic log) merged (pull request #24, for #23, DEC-033) and released as `v0.5.0`. Local `main` follows `origin/main`
 - Workflow (DEC-026): one GitHub Issue per increment. Each is built on a branch `feature/<issue>-<short-name>` cut from the latest `main`, committed and pushed at clear deliverable steps, and opened as a pull request that closes its Issue. The user reviews and merges; the agent merges only when asked. Start the next branch after the previous pull request merges, from the new `main`
 - Exact HEAD revision: see `git log -1` on the current branch
 - Working tree: clean after each commit
-- Last completed slice: S14 to S18, released as `v0.4.0` (2026-11-26)
+- Last completed slice: S19, released as `v0.5.0` (2026-11-27)
 - Last verified state: S01, S03 and S04 in game (V-002, V-004, V-005 pass, 2026-11-25); S02 with test kills only (V-003 is #2). Organic evidence in the user's saved data (read 2026-11-27): six of the user's own deaths to players, recorded in Wetlands on 2026-11-25 with exact times and positions (V-003's main part, if they were world PvP; its instance and Bugsy parts unchecked), and seven guildmates' deaths from Revenge Book over the guild channel (V-015, in part). Bugsy held no errors from Revenge
-- Current slice and pending edits: S19 (#23), committed on `feature/23-diagnostic-log`. Both folders are linked into the game with junctions: `_forever_\Interface\AddOns\RevengeTracker` → `RevengeTracker\` and `_forever_\Interface\AddOns\RevengeTracker_OtherAddons` → `RevengeTracker_OtherAddons\` (since 2026-11-26) in this repo, so a `/reload` loads whichever branch is checked out. Never remove, replace or install over either junction: deleting through one deletes the repo's files
-- Next executable action: the user reviews the #23 pull request. Then, with the log on (`/revenge log on`), the in-game checks (V-003, V-006 to V-011, V-013, V-015 to V-020) over time as the user plays, reviewed with `tools/review_log.py` (DEC-031, DEC-033). #2 waits for a real PvP death
+- Current slice and pending edits: none; every planned slice is built. Both folders are linked into the game with junctions: `_forever_\Interface\AddOns\RevengeTracker` → `RevengeTracker\` and `_forever_\Interface\AddOns\RevengeTracker_OtherAddons` → `RevengeTracker_OtherAddons\` (since 2026-11-26) in this repo, so a `/reload` loads whichever branch is checked out. Never remove, replace or install over either junction: deleting through one deletes the repo's files
+- Next executable action: with the log on (`/revenge log on`), the in-game checks (V-003, V-006 to V-011, V-013, V-015 to V-020) over time as the user plays, reviewed with `tools/review_log.py` (DEC-031, DEC-033). #2 waits for a real PvP death
 - Offline tests: `.venv\Scripts\python.exe -I tests\run.py` (183 passing as of 2026-11-27), and the tools' `python -I -m unittest discover -s tools -p "test_*.py"` (18: the package checker and the log reader). CI runs both
 - Open questions / blockers: Q-009 (at S08, #7). Resolved: Q-001 to Q-008, Q-010 to Q-015 (Q-015 by DEC-031)
 - Decisions to retain: DEC-001 to DEC-033 (DEC-033: the diagnostic log; DEC-031 and DEC-032: other addons built together, and how their data is taken in; DEC-028 to DEC-030: sharing with the guild, friends and Battle.net, and how the skull, pins and alerts are built; DEC-027: how the release is packaged; DEC-020: other addons are low priority, isolated, silent on failure, built after the first release; DEC-023 to DEC-025: how the list sits on the page, what Remove removes, and Add by name's rules; DEC-026: Issues and pull requests)

@@ -1,6 +1,6 @@
 # Revenge changelog
 
-## Unreleased
+## v0.5.0
 
 - A diagnostic log, off by default, for looking into a problem later. `/revenge log on` (or "Keep a
   diagnostic log" under Options › AddOns › Revenge › Troubleshooting) saves a short line for each of
