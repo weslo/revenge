@@ -4,11 +4,13 @@ Usage: python -I tools/check_package.py [--release-json] [RELEASE_DIR]
 
 RELEASE_DIR defaults to .release, where the packager writes. Exit code 1 if:
 - there isn't exactly one zip;
-- the zip holds anything outside the RevengeTracker folder (the plan, tests or tools, or a
-  leftover "Revenge" folder from a packaging mistake);
-- the TOC is missing, its interface isn't Forever's (16000-19999), or its version is still
-  the @project-version@ placeholder;
-- a file the TOC lists is missing, or there's a file the TOC doesn't list (textures in
+- the zip holds anything outside the RevengeTracker and RevengeTracker_OtherAddons
+  folders (the plan, tests or tools, or a leftover "Revenge" folder from a packaging
+  mistake);
+- either folder's TOC is missing, its interface isn't Forever's (16000-19999), or its
+  version is still the @project-version@ placeholder;
+- the optional module isn't load-on-demand, or doesn't depend on Revenge;
+- a file a TOC lists is missing, or there's a file its TOC doesn't list (textures in
   RevengeTracker/Media/ are the exception: code loads them by path);
 - with --release-json: release.json doesn't list the zip with flavor "forever" and a Forever
   interface. That entry is how instawow picks this build.
@@ -21,10 +23,10 @@ import sys
 import zipfile
 from pathlib import Path
 
-FOLDER = "RevengeTracker"
-TOC = f"{FOLDER}/{FOLDER}.toc"
+FOLDERS = ("RevengeTracker", "RevengeTracker_OtherAddons")
+MODULE = "RevengeTracker_OtherAddons"
 FOREVER = range(16000, 20000)
-MEDIA = (f"{FOLDER}/Media/",)
+MEDIA = ("RevengeTracker/Media/",)
 MEDIA_TYPES = (".tga", ".blp")
 
 
@@ -42,33 +44,45 @@ def read_toc(text: str) -> tuple[dict[str, str], list[str]]:
     return fields, files
 
 
-def check_zip(path: Path) -> list[str]:
+def check_folder(archive: zipfile.ZipFile, names: list[str], folder: str) -> list[str]:
     problems: list[str] = []
-    with zipfile.ZipFile(path) as archive:
-        names = [n for n in archive.namelist() if not n.endswith("/")]
-        outside = sorted({n.split("/", 1)[0] for n in names if not n.startswith(FOLDER + "/")})
-        if outside:
-            problems.append(f"files outside {FOLDER}/: {', '.join(outside)}")
-        if TOC not in names:
-            problems.append(f"no {TOC}")
-            return problems
-        fields, listed = read_toc(archive.read(TOC).decode("utf-8-sig"))
+    toc = f"{folder}/{folder}.toc"
+    if toc not in names:
+        return [f"no {toc}"]
+    fields, listed = read_toc(archive.read(toc).decode("utf-8-sig"))
 
     interfaces = [part.strip() for part in fields.get("Interface", "").split(",")]
     if not all(part.isdigit() and int(part) in FOREVER for part in interfaces):
-        problems.append(f"interface {fields.get('Interface')!r} isn't Forever's (16000-19999)")
+        problems.append(f"{folder}: interface {fields.get('Interface')!r} isn't Forever's (16000-19999)")
     version = fields.get("Version", "")
     if not version or "@" in version:
-        problems.append(f"version {version!r} wasn't filled in by the packager")
+        problems.append(f"{folder}: version {version!r} wasn't filled in by the packager")
+    if folder == MODULE:
+        if fields.get("LoadOnDemand") != "1":
+            problems.append(f"{folder} must be load-on-demand: Revenge loads it only when it's switched on")
+        if "RevengeTracker" not in [d.strip() for d in fields.get("Dependencies", "").split(",")]:
+            problems.append(f"{folder} must depend on RevengeTracker")
 
-    expected = {f"{FOLDER}/{name}" for name in listed} | {TOC}
-    inside = {n for n in names if n.startswith(FOLDER + "/")}
+    expected = {f"{folder}/{name}" for name in listed} | {toc}
+    inside = {n for n in names if n.startswith(folder + "/")}
     missing = sorted(expected - inside)
     extra = sorted(n for n in inside - expected if not (n.startswith(MEDIA) and n.lower().endswith(MEDIA_TYPES)))
     if missing:
         problems.append(f"listed in the TOC but missing: {', '.join(missing)}")
     if extra:
         problems.append(f"not listed in the TOC: {', '.join(extra)}")
+    return problems
+
+
+def check_zip(path: Path) -> list[str]:
+    problems: list[str] = []
+    with zipfile.ZipFile(path) as archive:
+        names = [n for n in archive.namelist() if not n.endswith("/")]
+        outside = sorted({n.split("/", 1)[0] for n in names if n.split("/", 1)[0] not in FOLDERS})
+        if outside:
+            problems.append(f"files outside {' and '.join(f + '/' for f in FOLDERS)}: {', '.join(outside)}")
+        for folder in FOLDERS:
+            problems += check_folder(archive, names, folder)
     return problems
 
 

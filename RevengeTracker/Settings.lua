@@ -1,6 +1,6 @@
 -- Settings: the "Revenge" category in Options > AddOns, built from the game's own
--- controls, with the "Recent killers" list (ListPanel.lua) at the end. Controls for
--- later features are added as those features land.
+-- controls: Kills, Sharing, Alerts, the "Recent killers" list (ListPanel.lua), then
+-- Other addons with their status lines (OthersPanel.lua).
 local addonName, ns = ...
 
 local Settings_ = ns.RegisterModule("Settings", {})
@@ -47,14 +47,44 @@ local function AddModifierDropdown()
     Settings.CreateDropdown(category, setting, Options, L.SETTING_MODIFIER_TOOLTIP)
 end
 
--- A checkbox for a Boolean setting; anything showing data redraws when it changes.
-local function AddCheckbox(key, label, tooltip)
+local registered = {}       -- setting key -> the game's setting object
+local onChange = {}         -- setting key -> what else happens when it changes
+
+-- A checkbox for a Boolean setting; anything showing data redraws when it changes,
+-- and `changed` (if given) runs too.
+local function AddCheckbox(key, label, tooltip, changed)
     if not Settings.CreateCheckbox then return end
     local setting = Register(key, Settings.VarType.Boolean, label, ns.Store.DEFAULTS[key])
+    registered[key] = setting
+    onChange[key] = changed or function() ns.Changed() end
     Settings.CreateCheckbox(category, setting, tooltip)
     if Settings.SetOnValueChangedCallback then
-        Settings.SetOnValueChangedCallback(addonName .. "_" .. key, function() ns.Changed() end)
+        Settings.SetOnValueChangedCallback(addonName .. "_" .. key, function() onChange[key]() end)
     end
+end
+
+-- Changes a setting from outside the page (a slash command), so the page's control
+-- and everything else follow.
+function Settings_.Set(key, value)
+    local setting = registered[key]
+    if setting and type(setting.SetValue) == "function" then
+        setting:SetValue(value)
+        return
+    end
+    ns.db.settings[key] = value
+    local changed = onChange[key] or function() ns.Changed() end
+    changed()
+end
+
+-- "Other addons": the master switch, one switch per addon, and how each is doing.
+local function AddOtherAddons()
+    AddSectionHeader(L.SECTION_OTHERS)
+    AddCheckbox("otherAddons", L.SETTING_OTHERS, L.SETTING_OTHERS_TOOLTIP, ns.Foreign.OnSwitch)
+    for _, adapter in ipairs(ns.Foreign.ADAPTERS) do
+        AddCheckbox(adapter.setting, adapter.title, L[adapter.tooltip])
+    end
+    local ok, err = pcall(ns.OthersPanel.AddTo, layout)
+    if not ok then ns.Debug("other addons status error: %s", tostring(err)) end
 end
 
 function Settings_:OnLogin()
@@ -82,6 +112,8 @@ function Settings_:OnLogin()
     -- The list is the only custom element; if it can't be built, the rest still works.
     local ok, err = pcall(ns.ListPanel.AddTo, layout)
     if not ok then ns.Debug("list error: %s", tostring(err)) end
+    -- Other addons last: they're optional and low priority (DEC-020).
+    AddOtherAddons()
     Settings.RegisterAddOnCategory(category)
     Settings_.category = category
 end

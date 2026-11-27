@@ -23,4 +23,5 @@ Nameplates.lua
 MapPins.lua
 Templates.xml
 ListPanel.lua
+OthersPanel.lua
 Settings.lua

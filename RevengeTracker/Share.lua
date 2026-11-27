@@ -249,7 +249,9 @@ local function AnswerTexts(since, me, now)
     local texts = {}
     local kills = {}
     for _, kill in pairs(Store.AllKills()) do
-        if not kill.test and kill.at >= since and now - kill.at <= MAX_AGE and Identity.IsSelf(kill.victim) then
+        -- Only what Revenge itself recorded: other addons' copies aren't ours to pass on.
+        if kill.own and not kill.test and kill.at >= since and now - kill.at <= MAX_AGE
+            and Identity.IsSelf(kill.victim) then
             kills[#kills + 1] = kill
         end
     end
@@ -258,7 +260,7 @@ local function AnswerTexts(since, me, now)
     end
     local marks = {}
     for _, mark in pairs(Store.AllWanted()) do
-        if Identity.IsSelf(mark.by) then marks[#marks + 1] = mark end
+        if mark.own and Identity.IsSelf(mark.by) then marks[#marks + 1] = mark end
     end
     for _, mark in ipairs(Take(marks, ANSWER_MARKS)) do texts[#texts + 1] = Protocol.Wanted(me, mark) end
     -- Withdrawals are stored as "target key|adder key" = time.
@@ -328,17 +330,7 @@ local function Allow(senderKey, now)
     return true
 end
 
--- Whether the game's sender name fits the name in the message. The game gives
--- "Name", "Name-Realm", "Name-Surname" or "Name Surname": the first name must match,
--- and a surname too when the game gives one after a space.
-local function SenderMatches(sender, claimedKey)
-    local name = ns.AccessibleString(Try(Ambiguate, sender, "none")) or sender
-    local first, rest = name:match("^(%S+)%s+(.+)$")
-    if first then
-        return Identity.Key(first .. " " .. (rest:match("^([^%-]+)") or rest)) == claimedKey
-    end
-    return Identity.Key(name:match("^([^%-]+)") or name) == claimedKey:match("^(%S+)")
-end
+local SenderMatches = Identity.SenderIs
 
 local function MapName(mapID)
     if not (mapID and C_Map and C_Map.GetMapInfo) then return nil end

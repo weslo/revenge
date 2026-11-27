@@ -1,5 +1,22 @@
 # Revenge changelog
 
+## v0.4.0
+
+- Data from other PvP addons counts too: deaths and wanted players that guildmates and friends
+  share through **Revenge Book**, **Grudgekeeper** or **HeadHunter**, and the players on your own
+  **Kill on Sight** list. Each death still counts once, however many addons reported it.
+- It's optional and switched on by default: Options › AddOns › Revenge › Other addons has a
+  switch for all of it, one per addon, and a line saying how each is doing. `/revenge others off`
+  switches it off from chat. Switched off, what only other addons reported is hidden at once, and
+  their support doesn't load at all after `/reload`.
+- Other addons can't slow or break Revenge: their messages wait their turn in a small queue that
+  runs a little each frame and never in combat, and an addon whose data stops making sense is
+  paused for the session without a word.
+- Holding Shift on a tooltip says "via Revenge Book" (or whichever) for a kill only another
+  addon reported.
+- The release now holds a second folder, `RevengeTracker_OtherAddons`, which instawow installs
+  with it.
+
 ## v0.3.0
 
 - Sharing with in-game friends and Battle.net friends who run Revenge, each with its own switch

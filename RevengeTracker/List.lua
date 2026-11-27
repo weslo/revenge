@@ -70,7 +70,7 @@ function List.Rows(now)
         end
     end
     for _, mark in pairs(Store.AllWanted()) do
-        if not mark.hidden then
+        if Store.MarkShown(mark) then
             Identity.Resolve(mark.target)
             local row = RowFor(mark.target)
             row.marks[#row.marks + 1] = mark
@@ -115,7 +115,8 @@ function List.Remove(row)
     for _, mark in ipairs(row.marks) do
         if Identity.IsSelf(mark.by) then
             Merge.SubmitWithdrawal({ target = mark.target, by = mark.by, at = now })
-            ns.Try(ns.Share and ns.Share.OwnWithdrawal, mark.target, now)
+            -- Only marks Revenge shared need taking back from others.
+            if mark.own then ns.Try(ns.Share and ns.Share.OwnWithdrawal, mark.target, now) end
         else
             mark.hidden = true
         end

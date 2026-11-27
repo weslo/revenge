@@ -168,6 +168,24 @@ function Friends.FromWhisper(sender)
     return FindWhisperer(sender)
 end
 
+-- Whether a name the game gave (a whisper's or group message's sender) is an online
+-- in-game friend or a Battle.net friend's character on Forever and your faction.
+-- Used for other addons' messages (Foreign.lua), which can come by whisper or group.
+function Friends.IsFriendName(name)
+    local function Find()
+        for _, route in pairs(online) do
+            if Friends.SameName(route.name, name) then return true end
+        end
+        return false
+    end
+    if Find() then return true end
+    local clock = GetTime()
+    if lastEagerScan and clock - lastEagerScan < EAGER_SCAN_GAP then return false end
+    lastEagerScan = clock
+    Rescan()
+    return Find()
+end
+
 -- The route of a Battle.net friend's game account, or nil if it isn't one we take.
 function Friends.FromBattleNet(gameAccountID)
     if not (C_BattleNet and C_BattleNet.GetGameAccountInfoByID) then return nil end

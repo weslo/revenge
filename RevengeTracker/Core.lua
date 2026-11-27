@@ -113,16 +113,36 @@ end)
 -- nameplates and map pins later) subscribes with ns.OnChange(fn). Merge and the
 -- list call ns.Changed() after changing stored data.
 local changeListeners = {}
+local batching, changedInBatch = 0, false
 
 function ns.OnChange(fn)
     changeListeners[#changeListeners + 1] = fn
 end
 
 function ns.Changed()
+    if batching > 0 then
+        changedInBatch = true
+        return
+    end
     for i = 1, #changeListeners do
         local ok, err = pcall(changeListeners[i])
         if not ok then ns.Debug("change listener error: %s", tostring(err)) end
     end
+end
+
+-- Runs fn(...) with redraws held back, then redraws once if anything changed (for
+-- many records arriving together, like other addons' saved data). Returns fn's first
+-- result, or nil if it errored.
+function ns.Batch(fn, ...)
+    batching = batching + 1
+    local ok, result = pcall(fn, ...)
+    batching = batching - 1
+    if not ok then ns.Debug("batch error: %s", tostring(result)) end
+    if batching == 0 and changedInBatch then
+        changedInBatch = false
+        ns.Changed()
+    end
+    if ok then return result end
 end
 
 -- Runs fn after delay seconds, isolated like an event handler.
@@ -170,7 +190,8 @@ end)
 ---------------------------------------------------------------------------
 local function ShowHelp()
     ns.Print(L.HELP_HEADER)
-    for _, line in ipairs({ L.HELP_OPEN, L.HELP_ADD, L.HELP_TEST, L.HELP_TEST_SHARE, L.HELP_TEST_CLEAR, L.HELP_DEBUG }) do
+    for _, line in ipairs({ L.HELP_OPEN, L.HELP_ADD, L.HELP_TEST, L.HELP_TEST_SHARE, L.HELP_TEST_CLEAR,
+                            L.HELP_OTHERS, L.HELP_DEBUG }) do
         DEFAULT_CHAT_FRAME:AddMessage("  " .. line)
     end
 end
@@ -199,6 +220,17 @@ end
 function commands.add(rest)
     local _, message = ns.List.AddByName(rest)
     ns.Print(message)
+end
+
+-- /revenge others [on|off]: data from other addons (Foreign.lua).
+function commands.others(rest)
+    if rest == "off" or rest == "on" then
+        ns.Foreign.SetEnabled(rest == "on")
+        ns.Print(rest == "on" and L.OTHERS_NOW_ON or L.OTHERS_NOW_OFF)
+        return
+    end
+    ns.Print(L.OTHERS_HEADER)
+    for _, line in ipairs(ns.Foreign.StatusLines()) do DEFAULT_CHAT_FRAME:AddMessage("  " .. line) end
 end
 
 function commands.debug()

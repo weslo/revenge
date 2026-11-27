@@ -160,6 +160,19 @@ function Identity.Same(a, b)
     return false
 end
 
+-- Whether the name the game gives a message's sender fits a player's name key. The game
+-- gives "Name", "Name-Realm", "Name-Surname" or "Name Surname": the first name must
+-- match, and a surname too when the game gives one after a space.
+function Identity.SenderIs(sender, key)
+    if type(sender) ~= "string" or type(key) ~= "string" then return false end
+    local name = AccessibleString(Try(Ambiguate, sender, "none")) or sender
+    local first, rest = name:match("^(%S+)%s+(.+)$")
+    if first then
+        return Identity.Key(first .. " " .. (rest:match("^([^%-]+)") or rest)) == key
+    end
+    return Identity.Key(name:match("^([^%-]+)") or name) == key:match("^(%S+)")
+end
+
 -- Short display name: the first name, or "You".
 function Identity.ShortName(identity)
     if Identity.IsSelf(identity) then return ns.L.YOU end

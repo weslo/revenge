@@ -15,19 +15,21 @@ from pathlib import Path
 
 import check_package
 
-ADDON = Path(__file__).resolve().parent.parent / "RevengeTracker"
+ROOT = Path(__file__).resolve().parent.parent
 ZIP_NAME = "Revenge-v0.1.0-forever.zip"
+MODULE_TOC = "RevengeTracker_OtherAddons/RevengeTracker_OtherAddons.toc"
 
 
 def addon_files(version: str = "v0.1.0") -> dict[str, bytes]:
-    """The real addon folder, with the TOC's version filled in as the packager does."""
+    """The real addon folders, with the TOCs' version filled in as the packager does."""
     files = {}
-    for path in ADDON.rglob("*"):
-        if path.is_file():
-            data = path.read_bytes()
-            if path.suffix == ".toc":
-                data = data.replace(b"@project-version@", version.encode())
-            files["RevengeTracker/" + path.relative_to(ADDON).as_posix()] = data
+    for folder in ("RevengeTracker", "RevengeTracker_OtherAddons"):
+        for path in (ROOT / folder).rglob("*"):
+            if path.is_file():
+                data = path.read_bytes()
+                if path.suffix == ".toc":
+                    data = data.replace(b"@project-version@", version.encode())
+                files[folder + "/" + path.relative_to(ROOT / folder).as_posix()] = data
     return files
 
 
@@ -65,7 +67,7 @@ class CheckPackage(unittest.TestCase):
         files = addon_files() | {"Revenge/CHANGELOG.md": b"# changes"}
         code, out = self.run_check(self.build(files))
         self.assertEqual(code, 1)
-        self.assertIn("files outside RevengeTracker/: Revenge", out)
+        self.assertIn("files outside RevengeTracker/ and RevengeTracker_OtherAddons/: Revenge", out)
 
     def test_an_unfilled_version_fails(self):
         code, out = self.run_check(self.build(addon_files("@project-version@")))
@@ -89,6 +91,18 @@ class CheckPackage(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("missing: RevengeTracker/Merge.lua", out)
         self.assertIn("not listed in the TOC: RevengeTracker/Notes.txt", out)
+
+    def test_the_optional_module_is_packaged_load_on_demand(self):
+        files = addon_files()
+        self.assertIn("RevengeTracker_OtherAddons/Adapters/RevengeBook.lua", files)
+        files[MODULE_TOC] = files[MODULE_TOC].replace(b"## LoadOnDemand: 1", b"## LoadOnDemand: 0")
+        problems = check_package.check_zip(self.build(files) / ZIP_NAME)
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("must be load-on-demand", problems[0])
+        files = addon_files()
+        del files[MODULE_TOC]
+        problems = check_package.check_zip(self.build(files) / ZIP_NAME)
+        self.assertIn(f"no {MODULE_TOC}", problems)
 
     def test_a_non_forever_interface_fails(self):
         files = addon_files()

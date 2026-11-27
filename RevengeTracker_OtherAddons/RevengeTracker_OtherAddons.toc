@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: Revenge: other addons
+## Notes: Optional part of Revenge: lets it use deaths and wanted players from other PvP addons. Revenge loads it only while "Use data from other addons" is on.
+## Version: @project-version@
+## Dependencies: RevengeTracker
+## LoadOnDemand: 1
+## X-Website: https://github.com/weslo/revenge
+
+Breaker.lua
+Queue.lua
+Host.lua
+Adapters\RevengeBook.lua
+Adapters\Grudgekeeper.lua
+Adapters\HeadHunter.lua
+Adapters\KillOnSight.lua
