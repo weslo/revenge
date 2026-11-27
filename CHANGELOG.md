@@ -1,6 +1,6 @@
 # Revenge changelog
 
-## Unreleased
+## v0.4.0
 
 - Data from other PvP addons counts too: deaths and wanted players that guildmates and friends
   share through **Revenge Book**, **Grudgekeeper** or **HeadHunter**, and the players on your own
