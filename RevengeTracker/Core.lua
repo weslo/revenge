@@ -46,7 +46,7 @@ function ns.Try(fn, ...)
     if type(fn) ~= "function" then return end
     local results = { pcall(fn, ...) }
     if not results[1] then
-        ns.Debug("error: %s", tostring(results[2]))
+        ns.Fail("error: %s", tostring(results[2]))
         return
     end
     return unpack(results, 2, table.maxn(results))
@@ -85,6 +85,13 @@ function ns.Debug(fmt, ...)
     DEFAULT_CHAT_FRAME:AddMessage("|cff888888Revenge debug:|r " .. (ok and text or tostring(fmt)))
 end
 
+-- An error Revenge caught: kept in the diagnostic log (Diagnostics.lua), and shown in
+-- chat with /revenge debug.
+function ns.Fail(fmt, ...)
+    ns.Debug(fmt, ...)
+    if ns.Log then ns.Log("error", fmt, ...) end
+end
+
 ---------------------------------------------------------------------------
 -- Events: modules subscribe with ns.On(event, handler). Every handler is
 -- isolated, so one module's error can't stop the others.
@@ -105,7 +112,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
     if not list then return end
     for i = 1, #list do
         local ok, err = pcall(list[i], ...)
-        if not ok then ns.Debug("%s handler error: %s", event, tostring(err)) end
+        if not ok then ns.Fail("%s handler error: %s", event, tostring(err)) end
     end
 end)
 
@@ -126,7 +133,7 @@ function ns.Changed()
     end
     for i = 1, #changeListeners do
         local ok, err = pcall(changeListeners[i])
-        if not ok then ns.Debug("change listener error: %s", tostring(err)) end
+        if not ok then ns.Fail("change listener error: %s", tostring(err)) end
     end
 end
 
@@ -137,7 +144,7 @@ function ns.Batch(fn, ...)
     batching = batching + 1
     local ok, result = pcall(fn, ...)
     batching = batching - 1
-    if not ok then ns.Debug("batch error: %s", tostring(result)) end
+    if not ok then ns.Fail("batch error: %s", tostring(result)) end
     if batching == 0 and changedInBatch then
         changedInBatch = false
         ns.Changed()
@@ -149,7 +156,7 @@ end
 function ns.After(delay, fn)
     C_Timer.After(delay, function()
         local ok, err = pcall(fn)
-        if not ok then ns.Debug("timer error: %s", tostring(err)) end
+        if not ok then ns.Fail("timer error: %s", tostring(err)) end
     end)
 end
 
@@ -171,7 +178,7 @@ ns.On("ADDON_LOADED", function(loaded)
     for _, module in ipairs(ns.modules) do
         if module.Init then
             local ok, err = pcall(module.Init, module)
-            if not ok then ns.Debug("%s init error: %s", module.name, tostring(err)) end
+            if not ok then ns.Fail("%s init error: %s", module.name, tostring(err)) end
         end
     end
 end)
@@ -180,7 +187,7 @@ ns.On("PLAYER_LOGIN", function()
     for _, module in ipairs(ns.modules) do
         if module.OnLogin then
             local ok, err = pcall(module.OnLogin, module)
-            if not ok then ns.Debug("%s login error: %s", module.name, tostring(err)) end
+            if not ok then ns.Fail("%s login error: %s", module.name, tostring(err)) end
         end
     end
 end)
@@ -191,7 +198,7 @@ end)
 local function ShowHelp()
     ns.Print(L.HELP_HEADER)
     for _, line in ipairs({ L.HELP_OPEN, L.HELP_ADD, L.HELP_TEST, L.HELP_TEST_SHARE, L.HELP_TEST_CLEAR,
-                            L.HELP_OTHERS, L.HELP_DEBUG }) do
+                            L.HELP_OTHERS, L.HELP_LOG, L.HELP_DEBUG }) do
         DEFAULT_CHAT_FRAME:AddMessage("  " .. line)
     end
 end
@@ -231,6 +238,11 @@ function commands.others(rest)
     end
     ns.Print(L.OTHERS_HEADER)
     for _, line in ipairs(ns.Foreign.StatusLines()) do DEFAULT_CHAT_FRAME:AddMessage("  " .. line) end
+end
+
+-- /revenge log [on|off|clear]: the diagnostic log (Diagnostics.lua).
+function commands.log(rest)
+    ns.Diagnostics.Command(rest)
 end
 
 function commands.debug()

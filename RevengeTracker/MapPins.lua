@@ -20,6 +20,7 @@ local GREY = { 0.6, 0.6, 0.6 }
 
 local provider
 local refreshAfterCombat = false
+local lastLogged                 -- "mapID:pins" last written to the diagnostic log
 
 -- The pin template names this mixin (Templates.xml). It's filled in once the map's
 -- own pin mixin exists, before any pin is made.
@@ -74,7 +75,9 @@ end
 -- Removes a kill everywhere: tooltip count, nameplate skull, list and map.
 function MapPins.Dismiss(id)
     if not Store.GetKill(id) then return end
+    local kill = Store.GetKill(id)
     Store.Dismiss(id)
+    ns.Log("list", "dismissed %s's death (killed by %s) from the map", kill.victim.name, ns.Diagnostics.Names(kill.killers))
     ns.Changed()
 end
 
@@ -149,6 +152,13 @@ local function Refresh(self)
             if shown >= MAX_PINS then break end
         end
     end
+    -- Noted when a map shows pins, once per map and number of pins.
+    local key = mapID .. ":" .. shown
+    if shown > 0 and key ~= lastLogged and ns.Diagnostics.On() then
+        lastLogged = key
+        local info = C_Map and Try(C_Map.GetMapInfo, mapID)
+        ns.Log("pins", "%d on %s (map %d)", shown, type(info) == "table" and info.name or "?", mapID)
+    end
 end
 
 local function Attach()
@@ -163,7 +173,7 @@ local function Attach()
     end
     function provider:RefreshAllData()
         local ok, err = pcall(Refresh, self)
-        if not ok then ns.Debug("map pins error: %s", tostring(err)) end
+        if not ok then ns.Fail("map pins error: %s", tostring(err)) end
     end
     WorldMapFrame:AddDataProvider(provider)
     MapPins.provider = provider

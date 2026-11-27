@@ -41,7 +41,13 @@ what reads other addons' data, and Revenge loads it only while that's switched o
   marks a player Wanted by you, `/revenge test` records a test kill by your target,
   `/revenge test share` also sends it to guildmates running Revenge, and `/revenge test clear` removes
   test kills. `/revenge others` says what other addons' data is in use (`on`/`off` switches it).
-  `/revenge debug` toggles a debug log.
+  `/revenge log on` keeps a diagnostic log in saved data (`off`, `clear`), and `/revenge debug` toggles
+  debug lines in chat.
+- To review play with the diagnostic log on: `/reload` or log out (the game writes saved variables then),
+  then run `python -I tools/review_log.py` (add `--summary` for just the checks). It finds
+  `RevengeTracker.lua` under the game's `WTF` folder, or takes a path, and prints the log in local time,
+  which checks have evidence, what's stored and Bugsy's errors that mention Revenge. It parses the saved
+  file as data and never runs it.
 - CI (`.github/workflows/build.yml`) runs the checks and tests above on every pull request and
   push to `main`. It also builds the release zip with the
   [BigWigs packager](https://github.com/BigWigsMods/packager) (settings in `.pkgmeta`), without

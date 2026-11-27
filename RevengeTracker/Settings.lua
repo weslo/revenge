@@ -1,6 +1,6 @@
 -- Settings: the "Revenge" category in Options > AddOns, built from the game's own
--- controls: Kills, Sharing, Alerts, the "Recent killers" list (ListPanel.lua), then
--- Other addons with their status lines (OthersPanel.lua).
+-- controls: Kills, Sharing, Alerts, the "Recent killers" list (ListPanel.lua), Other
+-- addons with their status lines (OthersPanel.lua), then Troubleshooting.
 local addonName, ns = ...
 
 local Settings_ = ns.RegisterModule("Settings", {})
@@ -84,7 +84,7 @@ local function AddOtherAddons()
         AddCheckbox(adapter.setting, adapter.title, L[adapter.tooltip])
     end
     local ok, err = pcall(ns.OthersPanel.AddTo, layout)
-    if not ok then ns.Debug("other addons status error: %s", tostring(err)) end
+    if not ok then ns.Fail("other addons status error: %s", tostring(err)) end
 end
 
 function Settings_:OnLogin()
@@ -111,9 +111,11 @@ function Settings_:OnLogin()
     AddCheckbox("alertSound", L.SETTING_ALERT_SOUND, L.SETTING_ALERT_SOUND_TOOLTIP)
     -- The list is the only custom element; if it can't be built, the rest still works.
     local ok, err = pcall(ns.ListPanel.AddTo, layout)
-    if not ok then ns.Debug("list error: %s", tostring(err)) end
-    -- Other addons last: they're optional and low priority (DEC-020).
+    if not ok then ns.Fail("list error: %s", tostring(err)) end
+    -- Other addons near the end: they're optional and low priority (DEC-020).
     AddOtherAddons()
+    AddSectionHeader(L.SECTION_TROUBLESHOOTING)
+    AddCheckbox("diagnosticLog", L.SETTING_LOG, L.SETTING_LOG_TOOLTIP, ns.Diagnostics.OnSwitch)
     Settings.RegisterAddOnCategory(category)
     Settings_.category = category
 end

@@ -52,6 +52,23 @@ function mod.Debug(fmt, ...)
     if core then core.Debug(fmt, ...) end
 end
 
+-- A line in Revenge's diagnostic log, while it's on.
+function mod.Log(kind, fmt, ...)
+    local core = mod.Core()
+    if core and core.Log then core.Log(kind, fmt, ...) end
+end
+
+-- An error caught in an adapter or here: kept in the diagnostic log, shown with /revenge debug.
+function mod.Fail(fmt, ...)
+    mod.Debug(fmt, ...)
+    mod.Log("error", "other addons: " .. tostring(fmt), ...)
+end
+
+-- Counts what happened to an adapter's messages, for a summary line every 10 minutes.
+function mod.Count(adapter, what)
+    adapter.counts[what] = (adapter.counts[what] or 0) + 1
+end
+
 -- Splits text on a plain separator, keeping empty fields. Nil past `max` fields.
 function mod.Split(text, sep, max)
     local fields, start = {}, 1
@@ -147,7 +164,10 @@ function mod.Register(adapter)
     end
     adapter.prefixes = adapter.prefixes or {}
     adapter.channels = adapter.channels or {}
-    adapter.breaker = Breaker.New()
+    adapter.breaker = Breaker.New(function(why)
+        mod.Log("others", "%s is paused for this session: %s", adapter.id, why)
+    end)
+    adapter.counts = {}
     adapter.reports = 0
     adapter.seen = {}
     adapter.senders = {}
@@ -183,8 +203,15 @@ local function OnAddonMessage(prefix, text, channel, sender)
     if not (core and core.Enabled()) or core.IsSelf(sender) then return end
     local now = GetTime()
     for _, adapter in ipairs(adapters) do
-        if adapter.channels[channel] and mod.Usable(adapter) and RateOk(adapter, sender, now) then
-            Queue.Push({ adapter = adapter, prefix = prefix, text = text, channel = channel, sender = sender })
+        if not adapter.channels[channel] then
+            mod.Count(adapter, "channel")
+        elseif mod.Usable(adapter) then
+            if RateOk(adapter, sender, now) then
+                mod.Count(adapter, "queued")
+                Queue.Push({ adapter = adapter, prefix = prefix, text = text, channel = channel, sender = sender })
+            else
+                mod.Count(adapter, "rate")
+            end
         end
     end
 end
@@ -218,7 +245,7 @@ local function Pump()
         pumping = true
         C_Timer.After(PUMP_EVERY, function()
             local ok, err = pcall(Pump)
-            if not ok then mod.Debug("imports: %s", err) end
+            if not ok then mod.Fail("imports: %s", err) end
         end)
     end
 end
@@ -243,6 +270,52 @@ local function ScheduleImports()
         end
         C_Timer.After(IMPORT_EVERY, Again)
     end)
+end
+
+---------------------------------------------------------------------------
+-- The diagnostic log's summary: what happened to each adapter's messages
+---------------------------------------------------------------------------
+local SUMMARY_EVERY = 600
+local SUMMARY = {
+    { "queued", "%d messages" }, { "ignored", "%d of types Revenge doesn't use" }, { "decoded", "%d with reports" },
+    { "stranger", "%d from strangers dropped" }, { "channel", "%d on other channels ignored" },
+    { "rate", "%d over the rate limit dropped" }, { "overflow", "%d dropped from a full queue" },
+    { "unparseable", "%d unparseable" },
+}
+
+local function Summarise()
+    for _, adapter in ipairs(mod.adapters) do
+        if next(adapter.counts) then
+            local parts = {}
+            for _, entry in ipairs(SUMMARY) do
+                local n = adapter.counts[entry[1]]
+                if n then parts[#parts + 1] = entry[2]:format(n) end
+            end
+            mod.Log("others", "%s, last 10 minutes or less: %s; %d records taken this session", adapter.id,
+                table.concat(parts, ", "), adapter.reports)
+            adapter.counts = {}
+        end
+    end
+end
+mod.Summarise = Summarise
+
+local function ScheduleSummaries()
+    local function Again()
+        pcall(Summarise)
+        C_Timer.After(SUMMARY_EVERY, Again)
+    end
+    C_Timer.After(SUMMARY_EVERY, Again)
+end
+
+-- Which other addons are here, once the module starts.
+local function LogStart()
+    local here, listening = {}, {}
+    for _, adapter in ipairs(mod.adapters) do
+        if mod.AddOnLoaded(adapter.addons) then here[#here + 1] = adapter.id end
+        if #adapter.prefixes > 0 then listening[#listening + 1] = adapter.id end
+    end
+    mod.Log("others", "the module started; listening for %s; other addons loaded here: %s",
+        table.concat(listening, ", "), #here > 0 and table.concat(here, ", ") or "none")
 end
 
 ---------------------------------------------------------------------------
@@ -276,14 +349,19 @@ frame:SetScript("OnEvent", function(_, event, ...)
     local ok, err = pcall(function(...)
         if event == "CHAT_MSG_ADDON" then
             OnAddonMessage(...)
+        elseif event == "PLAYER_LOGOUT" then
+            Summarise()
         elseif event == "ADDON_LOADED" and ... == addonName and not started then
             started = true
             for _, adapter in ipairs(mod.adapters) do RegisterPrefixes(adapter) end
             frame:RegisterEvent("CHAT_MSG_ADDON")
+            frame:RegisterEvent("PLAYER_LOGOUT")
             local core = mod.Core()
             if core then core.Attach({ Status = mod.Status, Register = mod.Register, Import = ImportRound }) end
+            LogStart()
             ScheduleImports()
+            ScheduleSummaries()
         end
     end, ...)
-    if not ok then mod.Debug("host: %s", err) end
+    if not ok then mod.Fail("host: %s", err) end
 end)

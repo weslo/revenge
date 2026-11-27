@@ -56,6 +56,17 @@ end
 
 local function Friends() return ns.Friends end
 
+-- "guild", "Mira Thornwood (whisper)", "Tavish Reed (Battle.net)": for the diagnostic log.
+local HOW = { WHISPER = "whisper", BN = "Battle.net" }
+local function RouteText(route)
+    if not route then return "-" end
+    if route.channel == "GUILD" then return "guild" end
+    return ("%s (%s)"):format(tostring(route.name or route.target or "?"), HOW[route.channel] or tostring(route.channel))
+end
+Share.RouteText = RouteText
+
+local function Names(identities) return ns.Diagnostics.Names(identities) end
+
 ---------------------------------------------------------------------------
 -- The send queue: up to BURST at once, then PER_SECOND; waits out combat,
 -- instances and the game's chat lockdown; backs off when throttled.
@@ -111,6 +122,7 @@ Pump = function()
         local item = queue[1]
         if ns.Now() - item.queued > QUEUE_TTL then
             table.remove(queue, 1)
+            ns.Log("out", "a message to %s waited over %d minutes and was dropped", RouteText(item), QUEUE_TTL / 60)
         elseif Held() then
             return Schedule(HOLD_RETRY)
         elseif tokens < 1 then
@@ -123,10 +135,12 @@ Pump = function()
             elseif outcome == "drop" then
                 table.remove(queue, 1)
                 ns.Debug("share: the game refused a message")
+                ns.Log("out", "the game refused a message to %s", RouteText(item))
             else
                 item.tries = item.tries + 1
                 if item.tries >= TRIES then
                     table.remove(queue, 1)
+                    ns.Log("out", "a message to %s failed %d times and was dropped", RouteText(item), TRIES)
                 else
                     if outcome == "throttle" then tokens = 0 end
                     return Schedule(BACKOFF * 2 ^ (item.tries - 1))
@@ -143,7 +157,8 @@ local function Enqueue(text, route)
     elseif not (C_ChatInfo and C_ChatInfo.SendAddonMessage) then
         return false
     end
-    queue[#queue + 1] = { text = text, channel = route.channel, target = route.target, queued = ns.Now(), tries = 0 }
+    queue[#queue + 1] = { text = text, channel = route.channel, target = route.target, name = route.name,
+                          queued = ns.Now(), tries = 0 }
     Schedule(0)
     return true
 end
@@ -165,13 +180,20 @@ local function Routes()
     return routes
 end
 
--- Sends texts to every route. Returns how many messages were queued.
-local function Broadcast(texts)
-    local queued = 0
+-- Sends texts to every route. Returns how many messages were queued. what: what they
+-- are, for the diagnostic log.
+local function Broadcast(texts, what)
+    local queued, reached = 0, {}
     for _, route in ipairs(Routes()) do
+        reached[#reached + 1] = RouteText(route)
         for _, text in ipairs(texts) do
             if Enqueue(text, route) then queued = queued + 1 end
         end
+    end
+    if #reached == 0 then
+        ns.Log("out", "%s: not shared, nowhere to send (sharing off, or no guild and no friends running Revenge online)", what)
+    else
+        ns.Log("out", "%s: %d messages queued to %s", what, queued, table.concat(reached, ", "))
     end
     return queued
 end
@@ -182,19 +204,20 @@ end
 -- A death of yours (Deaths.lua). Returns how many messages were queued.
 function Share.OwnKill(kill)
     if not (kill and Me() and Identity.IsSelf(kill.victim)) then return 0 end
-    return Broadcast(Protocol.Kill("K", Me(), kill))
+    return Broadcast(Protocol.Kill("K", Me(), kill), "your death")
 end
 
 -- A player you marked Wanted (List.lua).
 function Share.OwnWanted(mark)
     if not (mark and Me() and Identity.IsSelf(mark.by)) then return 0 end
-    return Broadcast({ Protocol.Wanted(Me(), mark) })
+    return Broadcast({ Protocol.Wanted(Me(), mark) }, ("your Wanted mark on %s"):format(tostring(mark.target.name)))
 end
 
 -- You withdrew your mark on target at `at` (List.lua).
 function Share.OwnWithdrawal(target, at)
     if not (target and Me()) then return 0 end
-    return Broadcast({ Protocol.Withdrawal(Me(), target.name or target.key, at) })
+    return Broadcast({ Protocol.Withdrawal(Me(), target.name or target.key, at) },
+        ("taking back your mark on %s"):format(tostring(target.name or target.key)))
 end
 
 ---------------------------------------------------------------------------
@@ -222,7 +245,10 @@ end
 local function SendGuildHello()
     guildHelloScheduled = false
     if guildHelloSent or not Try(IsInGuild) then return end
-    if Enqueue(HelloText(), GUILD) then guildHelloSent = true end
+    if Enqueue(HelloText(), GUILD) then
+        guildHelloSent = true
+        ns.Log("out", "hello to the guild, asking for what's new since %s", ns.Ago(ns.Now() - Share.HelloSince()))
+    end
 end
 
 local function ScheduleGuildHello()
@@ -233,7 +259,9 @@ end
 
 -- Says hello to one friend (Friends.lua). Returns true if it was queued.
 function Share.HelloTo(route)
-    return Enqueue(HelloText(), route)
+    local queued = Enqueue(HelloText(), route)
+    if queued then ns.Log("out", "hello to %s", RouteText(route)) end
+    return queued
 end
 
 local function Newest(a, b) return a.at > b.at end
@@ -285,7 +313,11 @@ local function SendAnswer(key)
     answer.since = nil
     local me = Me()
     if not (since and me and MayShare(answer.route)) then return end
-    for _, text in ipairs(AnswerTexts(since, me, ns.Now())) do Enqueue(text, answer.route) end
+    local texts, queued = AnswerTexts(since, me, ns.Now()), 0
+    for _, text in ipairs(texts) do
+        if Enqueue(text, answer.route) then queued = queued + 1 end
+    end
+    ns.Log("out", "answered the hello on %s: %d of %d messages queued", RouteText(answer.route), queued, #texts)
 end
 
 -- Answers a hello on its route (the guild, or that one friend), merging hellos that
@@ -296,9 +328,14 @@ local function OnHello(msg, senderKey, now, route)
         -- They don't know about us yet: say hello back, so they answer us too.
         if Share.HelloTo(route) then friends.SetHelloed(route) end
     end
-    if not MayShare(route) then return end
-    if helloAnswered[senderKey] and now - helloAnswered[senderKey] < HELLO_REPEAT then return end
+    if not MayShare(route) then
+        return ns.Log("in", "hello from %s by %s; not answered: your sharing there is off", msg.name, RouteText(route))
+    end
+    if helloAnswered[senderKey] and now - helloAnswered[senderKey] < HELLO_REPEAT then
+        return ns.Log("in", "hello from %s by %s; not answered: answered them in the last 5 minutes", msg.name, RouteText(route))
+    end
     helloAnswered[senderKey] = now
+    ns.Log("in", "hello from %s by %s, asking since %s", msg.name, RouteText(route), ns.Ago(now - msg.since))
     local answer = answers[route.key]
     if not answer then
         answer = { route = route, scheduled = false }
@@ -352,8 +389,11 @@ local function Learn(identity, now)
     ns.Merge.UpgradeIdentity(identity.guid, identity.key)
 end
 
-local function OnKill(msg, now)
-    if msg.at > now + MAX_FUTURE or now - msg.at > MAX_AGE then return end
+local function OnKill(msg, now, route)
+    local live = msg.type == "K" and "live" or "catch-up"
+    if msg.at > now + MAX_FUTURE or now - msg.at > MAX_AGE then
+        return ns.Log("in", "%s's death by %s (%s): dropped, its time is out of range", msg.name, RouteText(route), live)
+    end
     local victim = Player(msg)
     local killers = {}
     for _, fields in ipairs(msg.killers) do
@@ -363,13 +403,18 @@ local function OnKill(msg, now)
             Learn(killer, now)
         end
     end
-    if #killers == 0 then return end
+    if #killers == 0 then return ns.Log("in", "%s's death by %s (%s): dropped, no killers", msg.name, RouteText(route), live) end
     local kill, new = ns.Merge.SubmitKill({
         victim = victim, killers = killers, at = msg.at, precision = "exact",
         mapID = msg.mapID, x = msg.x, y = msg.y, zone = MapName(msg.mapID),
         sources = { revenge = true }, own = true, test = msg.test,
         origin = victim.key .. "#" .. msg.id,
     })
+    if not kill then
+        return ns.Log("in", "%s's death by %s (%s): not taken, dismissed earlier", msg.name, RouteText(route), live)
+    end
+    ns.Log("in", "%s's death by %s (%s): killed by %s in %s%s, %s", msg.name, RouteText(route), live, Names(killers),
+        tostring(kill.zone or "?"), msg.test and " (a test)" or "", new and "new" or "already known")
     -- A death just now (not a catch-up answer) alerts once.
     if new and msg.type == "K" then ns.Try(ns.Alerts and ns.Alerts.FriendKilled, kill) end
 end
@@ -389,39 +434,57 @@ local function HasMark(target, by)
     return false
 end
 
-local function OnWanted(msg, now)
-    if msg.at > now + MAX_FUTURE then return end
+local function OnWanted(msg, now, route)
+    local what = ("%s's Wanted mark on %s, by %s"):format(tostring(msg.name), tostring(msg.target.name), RouteText(route))
+    if msg.at > now + MAX_FUTURE then return ns.Log("in", "%s: dropped, its time is in the future", what) end
     local target, by = Player(msg.target), Player(msg)
-    if Identity.IsSelf(target) then return end
-    if not HasMark(target, by) and MarksBy(by) >= MARKS_PER_ADDER then return end
+    if Identity.IsSelf(target) then return ns.Log("in", "%s: it's you, so not shown", what) end
+    if not HasMark(target, by) and MarksBy(by) >= MARKS_PER_ADDER then
+        return ns.Log("in", "%s: dropped, they have %d marks already", what, MARKS_PER_ADDER)
+    end
     Learn(target, now)
-    ns.Merge.SubmitWanted({ target = target, by = by, at = msg.at, sources = { revenge = true }, own = true })
+    local mark, new = ns.Merge.SubmitWanted({ target = target, by = by, at = msg.at, sources = { revenge = true }, own = true })
+    ns.Log("in", "%s: %s", what, not mark and "not taken, they took it back later" or new and "new" or "already known")
 end
 
-local function OnWithdrawal(msg, now)
-    if msg.at > now + MAX_FUTURE then return end
-    ns.Merge.SubmitWithdrawal({ target = Identity.Make(msg.target.name, nil), by = Player(msg), at = msg.at })
+local function OnWithdrawal(msg, now, route)
+    local what = ("%s took back their mark on %s, by %s"):format(tostring(msg.name), tostring(msg.target.name), RouteText(route))
+    if msg.at > now + MAX_FUTURE then return ns.Log("in", "%s: dropped, its time is in the future", what) end
+    local removed = ns.Merge.SubmitWithdrawal({ target = Identity.Make(msg.target.name, nil), by = Player(msg), at = msg.at })
+    ns.Log("in", "%s: %s marks removed", what, removed)
 end
 
 local handlers = { K = OnKill, R = OnKill, M = OnWanted, X = OnWithdrawal }
 
 -- A message from `sender` (the name the game gave) that came by `route`.
+local rateLogged = {}         -- sender key -> when "sending too much" was last logged
+
 local function Receive(text, sender, route)
     if not (text and sender) or #sender > MAX_SENDER then return end
     local msg = Protocol.Decode(text)
-    if not msg then return ns.Debug("share: dropped a malformed message from %s", sender) end
+    if not msg then
+        ns.Log("in", "dropped a malformed message from %s by %s", sender, RouteText(route))
+        return ns.Debug("share: dropped a malformed message from %s", sender)
+    end
     local claimedKey = Identity.Key(msg.name)
     if Identity.IsSelf({ key = claimedKey, guid = msg.guid }) then return end  -- our own, echoed
     if not SenderMatches(sender, claimedKey) then
+        ns.Log("in", "dropped %s's message about %s by %s: not their own", sender, msg.name, RouteText(route))
         return ns.Debug("share: dropped %s's message about %s", sender, msg.name)
     end
     local now = ns.Now()
-    if not Allow(claimedKey, now) then return ns.Debug("share: %s is sending too much", sender) end
+    if not Allow(claimedKey, now) then
+        if not rateLogged[claimedKey] or now - rateLogged[claimedKey] > RATE_WINDOW then
+            rateLogged[claimedKey] = now
+            ns.Log("in", "dropping messages from %s for a while: over %d in 10 minutes", sender, PER_SENDER)
+        end
+        return ns.Debug("share: %s is sending too much", sender)
+    end
     if route ~= GUILD and Friends() then Friends().MarkPeer(route) end
     if msg.type == "H" then
         OnHello(msg, claimedKey, now, route)
     else
-        handlers[msg.type](msg, now)
+        handlers[msg.type](msg, now, route)
     end
 end
 
@@ -433,7 +496,10 @@ local function OnAddonMessage(prefix, text, channel, sender)
     if channel == "WHISPER" then
         -- Whispers count only from your in-game friends.
         local route = Friends() and Friends().FromWhisper(sender)
-        if not route then return ns.Debug("share: dropped a whisper from %s, who isn't a friend", sender) end
+        if not route then
+            ns.Log("in", "dropped a whisper from %s, who isn't an online friend", sender)
+            return ns.Debug("share: dropped a whisper from %s, who isn't a friend", sender)
+        end
         return Receive(text, sender, route)
     end
 end
@@ -443,7 +509,10 @@ local function OnBattleNetMessage(prefix, text, _, senderID)
     text, senderID = ns.AccessibleString(text), ns.AccessibleNumber(senderID)
     if not (text and senderID and Friends()) then return end
     local route = Friends().FromBattleNet(senderID)
-    if not route then return ns.Debug("share: dropped Battle.net data from an account Revenge doesn't share with") end
+    if not route then
+        ns.Log("in", "dropped Battle.net data from an account Revenge doesn't share with")
+        return ns.Debug("share: dropped Battle.net data from an account Revenge doesn't share with")
+    end
     Receive(text, route.name, route)
 end
 

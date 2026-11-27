@@ -25,3 +25,4 @@ Templates.xml
 ListPanel.lua
 OthersPanel.lua
 Settings.lua
+Diagnostics.lua

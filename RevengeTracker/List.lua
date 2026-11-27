@@ -123,6 +123,7 @@ function List.Remove(row)
         changed = true
     end
     if changed then ns.Changed() end
+    ns.Log("list", "took %s off the list", identity.name)
     return identity.name or "?"
 end
 
@@ -173,6 +174,7 @@ function List.AddByName(text)
     Store.ClearWithdrawal(Merge.PairKey(target, by))
     local mark = Merge.SubmitWanted({ target = target, by = by, at = ns.Now(), sources = { self = true }, own = true })
     if not mark then return false, L.ADD_FAILED end
+    ns.Log("list", "marked %s Wanted by you", mark.target.name or name)
     ns.Try(ns.Share and ns.Share.OwnWanted, mark)
     return true, L.ADD_DONE:format(mark.target.name or name)
 end

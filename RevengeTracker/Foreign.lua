@@ -173,25 +173,40 @@ local function OwnedBySender(ownerKey, sender, channel)
     return channel == "SAVED" or Identity.SenderIs(sender, ownerKey)
 end
 
-local function SubmitOne(raw, sourceId, sender, channel, now)
-    if type(raw) ~= "table" then return false end
+-- Returns whether the record was taken, and what happened, for the diagnostic log
+-- (described in full only when `noting`, so it costs nothing while the log is off).
+local function SubmitOne(raw, sourceId, sender, channel, now, noting)
+    if type(raw) ~= "table" then return false, "not a record" end
     if raw.type == "kill" then
         local kill = CleanKill(raw, sourceId, now)
-        if not (kill and OwnedBySender(kill.victim.key, sender, channel)) then return false end
-        local stored, new = ns.Merge.SubmitKill(kill)
-        -- A death arriving live (not a catch-up answer or saved data) alerts once.
-        if stored and new and raw.live == true and channel ~= "SAVED" then
-            Try(ns.Alerts and ns.Alerts.FriendKilled, stored)
+        if not kill then return false, "a death that failed the checks" end
+        if not OwnedBySender(kill.victim.key, sender, channel) then
+            return false, ("%s's death: not the sender's own"):format(tostring(kill.victim.name))
         end
-        return stored ~= nil
+        local what = noting and ("%s's death by %s in %s"):format(tostring(kill.victim.name),
+            ns.Diagnostics.Names(kill.killers), tostring(kill.zone or "?")) or "a death"
+        local stored, new = ns.Merge.SubmitKill(kill)
+        if not stored then return false, what .. ": dismissed earlier" end
+        -- A death arriving live (not a catch-up answer or saved data) alerts once.
+        local live = raw.live == true and channel ~= "SAVED"
+        if new and live then Try(ns.Alerts and ns.Alerts.FriendKilled, stored) end
+        return true, what .. (new and ": new" or ": already known") .. (live and ", live" or "")
     elseif raw.type == "wanted" or raw.type == "withdrawal" then
         local mark = CleanMark(raw, sourceId, now)
-        if not (mark and OwnedBySender(mark.by.key, sender, channel)) then return false end
-        if raw.type == "wanted" then return ns.Merge.SubmitWanted(mark) ~= nil end
-        ns.Merge.SubmitWithdrawal(mark, raw.remember == false)
-        return true
+        if not mark then return false, "a mark that failed the checks" end
+        if not OwnedBySender(mark.by.key, sender, channel) then
+            return false, ("a mark by %s: not the sender's own"):format(tostring(mark.by.name))
+        end
+        local what = noting and ("%s Wanted by %s"):format(tostring(mark.target.name), tostring(mark.by.name)) or "a mark"
+        if raw.type == "wanted" then
+            local stored, new = ns.Merge.SubmitWanted(mark)
+            if not stored then return false, what .. ": taken back earlier" end
+            return true, what .. (new and ": new" or ": already known") .. (mark.expires and ", until it lapses" or "")
+        end
+        local removed = ns.Merge.SubmitWithdrawal(mark, raw.remember == false)
+        return true, ("%s: ended, %s marks removed"):format(what, tostring(removed))
     end
-    return false
+    return false, "an unknown record type"
 end
 
 -- records: a list of raw records from one adapter. sourceId: e.g. "revengebook".
@@ -200,18 +215,36 @@ end
 -- addon's saved data. Returns how many were accepted. Never errors.
 function Foreign.Submit(records, sourceId, sender, channel)
     if not Enabled() or type(records) ~= "table" or not Text(sourceId) or not AdapterOn(sourceId) then return 0 end
-    if channel ~= "SAVED" and not Foreign.Trusted(sender, channel) then return 0 end
-    local accepted, now = 0, ns.Now()
+    if channel ~= "SAVED" and not Foreign.Trusted(sender, channel) then
+        ns.Log("others", "%s: refused a report from %s by %s: not a guildmate or friend", Foreign.Title(sourceId),
+            sender, channel)
+        return 0
+    end
+    local accepted, now, notes = 0, ns.Now(), {}
+    local total = math.min(#records, MAX_RECORDS)
+    -- Saved data comes in batches; the module writes one line for each whole read.
+    local noting = channel ~= "SAVED" and ns.Diagnostics.On()
     ns.Batch(function()
-        for i = 1, math.min(#records, MAX_RECORDS) do
-            if acceptedThisSession >= MAX_PER_SESSION then break end
-            local ok, taken = pcall(SubmitOne, records[i], sourceId, sender, channel, now)
+        for i = 1, total do
+            if acceptedThisSession >= MAX_PER_SESSION then
+                notes[#notes + 1] = "this session's limit is reached"
+                break
+            end
+            local ok, taken, note = pcall(SubmitOne, records[i], sourceId, sender, channel, now, noting)
             if ok and taken then
                 accepted = accepted + 1
                 acceptedThisSession = acceptedThisSession + 1
+            elseif not ok then
+                ns.Fail("other addons: %s record error: %s", sourceId, tostring(taken))
+                note = "an error"
             end
+            if #notes < 2 then notes[#notes + 1] = note end
         end
     end)
+    if noting then
+        ns.Log("others", "%s from %s by %s: %d of %d taken: %s", Foreign.Title(sourceId), sender, channel, accepted,
+            total, table.concat(notes, "; "))
+    end
     return accepted
 end
 
@@ -238,7 +271,10 @@ function Foreign.SyncMarks(sourceId, names)
         end
     end
     for _, id in ipairs(gone) do Store.RemoveWanted(id) end
-    if #gone > 0 then ns.Changed() end
+    if #gone > 0 then
+        ns.Log("others", "%s: %d Wanted marks removed, those players are off its list", Foreign.Title(sourceId), #gone)
+        ns.Changed()
+    end
     return #gone
 end
 
@@ -264,19 +300,23 @@ function Foreign.LoadModule()
         return
     end
     if Try(InCombatLockdown) then
+        if not Foreign.waitingForCombat then ns.Log("others", "the module waits for combat to end") end
         Foreign.waitingForCombat = true
         return
     end
     if not (C_AddOns and C_AddOns.LoadAddOn) then
         Foreign.moduleState = "failed"
+        ns.Log("others", "the module isn't loaded: the game can't load addons on demand")
         return
     end
     local loaded, reason = Try(C_AddOns.LoadAddOn, MODULE)
     if loaded then
         Foreign.moduleState = "loaded"
+        ns.Log("others", "the module is loaded")
     else
         Foreign.moduleState = REASONS[AccessibleString(reason) or ""] or "failed"
         ns.Debug("other addons: the module didn't load (%s)", tostring(reason))
+        ns.Log("others", "the module isn't loaded: %s (%s)", Foreign.moduleState, reason)
     end
 end
 
@@ -374,4 +414,6 @@ RevengeTracker = {
         if type(module) == "table" then Foreign.module = module end
     end),
     Debug = Safe(function(fmt, ...) ns.Debug("other addons: " .. tostring(fmt), ...) end),
+    -- A line in Revenge's diagnostic log (Diagnostics.lua), while it's on.
+    Log = Safe(function(kind, fmt, ...) ns.Log(kind, fmt, ...) end),
 }
