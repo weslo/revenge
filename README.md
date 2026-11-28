@@ -24,6 +24,9 @@ Or download the `Revenge-…-forever.zip` file from the
 `AddOns\RevengeTracker_OtherAddons` folders. Then restart the game. The second one is optional: it's
 what reads other addons' data, and Revenge loads it only while that's switched on.
 
+It's also on CurseForge as [Easy Revenge](https://www.curseforge.com/wow/addons/easy-revenge), once a
+moderator approves it.
+
 ## Development
 
 - Work is tracked in [Issues](https://github.com/weslo/revenge/issues), one per increment. Each is
@@ -55,6 +58,8 @@ what reads other addons' data, and Revenge loads it only while that's switched o
 - To release: add the version's section to the top of `CHANGELOG.md`, merge it, then tag `main`
   (`git tag v0.2.0`, `git push origin v0.2.0`). The workflow publishes the GitHub release, with
   the zip and the `release.json` that instawow reads. The TOC's `@project-version@` becomes the tag.
+  Then it uploads the same build to CurseForge, once the `CF_API_TOKEN` secret is set
+  ([listing notes](docs/curseforge/listing.md)).
 
 - What it will do: [requirements](docs/plans/revenge/REQUIREMENTS.md)
 - Build order and progress: [implementation matrix](docs/plans/revenge/IMPLEMENTATION-MATRIX.md)

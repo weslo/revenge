@@ -1,5 +1,10 @@
 # Revenge changelog
 
+## v0.5.1
+
+- Revenge is on CurseForge too, as **Easy Revenge**; in game it's still "Revenge". Nothing
+  else changes, and instawow still installs it from GitHub.
+
 ## v0.5.0
 
 - A diagnostic log, off by default, for looking into a problem later. `/revenge log on` (or "Keep a

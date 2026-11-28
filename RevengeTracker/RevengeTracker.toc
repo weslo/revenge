@@ -5,6 +5,7 @@
 ## SavedVariables: RevengeTrackerDB
 ## X-Website: https://github.com/weslo/revenge
 ## X-License: MIT
+## X-Curse-Project-ID: 1836789
 
 Locales\enUS.lua
 Core.lua
