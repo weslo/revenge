@@ -1,5 +1,5 @@
-# Checks every pull request and every push to main, and publishes a GitHub release when a
-# version tag (for example v0.1.0) is pushed.
+# Checks every pull request and every push to main. When a version tag (for example v0.1.0)
+# is pushed, it publishes a GitHub release, then uploads the same build to CurseForge.
 #
 # The release holds the addon zip and release.json. release.json names the zip as the
 # Forever build, which is how `instawow install github:weslo/revenge` finds it.
@@ -93,3 +93,14 @@ jobs:
 
       - name: Check what was published
         run: python3 -I tools/check_package.py --release-json .release
+
+      # CurseForge gets a step of its own, after the GitHub release, because the packager
+      # stops every other upload when CurseForge's fails. The project is the
+      # X-Curse-Project-ID in RevengeTracker.toc. Until the owner stores the CF_API_TOKEN
+      # secret, the packager skips the upload and this step only rebuilds the zip.
+      - name: Package and upload to CurseForge
+        uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812 # v2.7.0
+        with:
+          pandoc: false
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}

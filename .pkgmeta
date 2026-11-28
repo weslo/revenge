@@ -26,6 +26,7 @@ ignore:
   - .gitignore
   - .luacheckrc
   - CHANGELOG.md
+  - LICENSE
   - README.md
   - docs
   - tests
